@@ -77,7 +77,7 @@ public class ParticleInteraction : MonoBehaviour, IMouseMessageTarget
             velocity.z = 0;
             particle.velocity = velocity;
 
-            label.text = velocity.ToString();
+            label.text = $"{velocity} m/s";
         }
         else
         {
@@ -134,4 +134,13 @@ public class ParticleInteraction : MonoBehaviour, IMouseMessageTarget
 
     public void Sideways() => LoadScenario(Scenario.Sideways);
     public void StraightDown() => LoadScenario(Scenario.StraightDown);
+
+    public void Reset()
+    {
+        handleInput = true;
+        mouseDown = false;
+
+        arrow.gameObject.SetActive(true);
+        arrow.transform.position = new Vector3(1000, 0, 0);
+    }
 }

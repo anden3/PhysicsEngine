@@ -5,6 +5,7 @@
  */
 
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 using System.Collections.Generic;
@@ -15,6 +16,14 @@ public class ParticleWorld : MonoBehaviour
 	public Vector3 gravity = new Vector3(0.0f, -9.82f, 0.0f);
 
 	public bool calculateIterations;
+
+    [Header("UI Components")]
+    public InputField gravityField;
+    public InputField massField;
+
+    public Slider airResistanceSlider;
+    public Slider groundFrictionSlider;
+    public Slider bouncinessSlider;
 
 	protected Particle[] particles;
 
@@ -38,6 +47,16 @@ public class ParticleWorld : MonoBehaviour
         {
             p.acceleration = gravity;
         }
+
+        Debug.Assert(particles.Length >= 1);
+        Particle particle = particles[0];
+
+        gravityField.text = (-gravity.y).ToString();
+        massField.text = particle.mass.ToString();
+
+        airResistanceSlider.value = 1.0f - particle.airResistanceCoef;
+        groundFrictionSlider.value = 1.0f - particle.groundFrictionCoef;
+        bouncinessSlider.value = particle.bounciness;
     }
 
     private void FixedUpdate()
@@ -72,14 +91,66 @@ public class ParticleWorld : MonoBehaviour
 		return contacts.Count;
 	}
 
-	private void Integrate(float duration)
+	private void Integrate(float deltaTime)
 	{
 		foreach (Particle p in particles)
 		{
-			p.Integrate(duration);
+			p.Integrate(deltaTime);
 		}
 	}
 
     public void Reset()
-        => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    {
+        simulating = false;
+
+        foreach (Particle p in particles)
+        {
+            p.Reset();
+        }
+    }
+
+    public void SetGravity(string value)
+    {
+        Vector3 newG = Vector3.down * float.Parse(value) * -1;
+        Vector3 deltaG = newG - gravity;
+
+        foreach (Particle p in particles)
+        {
+            p.acceleration += deltaG;
+        }
+
+        gravity = newG;
+    }
+
+    public void SetMass(string value)
+    {
+        foreach (Particle p in particles)
+        {
+            p.SetMass(float.Parse(value));
+        }
+    }
+
+    public void SetAirResistance(float value)
+    {
+        foreach (Particle p in particles)
+        {
+            p.airResistanceCoef = 1.0f - value;
+        }
+    }
+
+    public void SetGroundFriction(float value)
+    {
+        foreach (Particle p in particles)
+        {
+            p.groundFrictionCoef = 1.0f - value;
+        }
+    }
+
+    public void SetBounciness(float value)
+    {
+        foreach (Particle p in particles)
+        {
+            p.bounciness = value;
+        }
+    }
 }

@@ -12,7 +12,7 @@ public class ParticleContactResolver : MonoBehaviour
 {
 	public int iterations;
 
-	public void ResolveContacts(List<ParticleContact> contacts, float duration)
+	public void ResolveContacts(List<ParticleContact> contacts, float deltaTime)
 	{
         int iterationsUsed = 0;
 
@@ -37,7 +37,7 @@ public class ParticleContactResolver : MonoBehaviour
 			if (maxIndex == contacts.Count) break;
 
 			// Resolve the contact.
-			contacts[maxIndex].Resolve(duration);
+			contacts[maxIndex].Resolve(deltaTime);
 			iterationsUsed++;
 		}
 	}

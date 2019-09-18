@@ -18,10 +18,10 @@ public class ParticleContact
 	public float penetration;
 	public Vector3 contactNormal;
 
-	public void Resolve(float duration)
+	public void Resolve(float deltaTime)
 	{
-		ResolveVelocity(duration);
-		ResolveInterpenetration(duration);
+		ResolveVelocity(deltaTime);
+		ResolveInterpenetration(deltaTime);
 	}
 
 	/*
@@ -36,7 +36,7 @@ public class ParticleContact
 		return Vector3.Dot(relativeVelocity, contactNormal);
 	}
 
-	private void ResolveVelocity(float duration)
+	private void ResolveVelocity(float deltaTime)
 	{
 		float separatingVelocity = CalculateSeparatingVelocity();
 
@@ -52,7 +52,7 @@ public class ParticleContact
 		// Check the velocity caused by acceleration.
 		Vector3 accCausedVelocity = first.acceleration;
 		if (second) accCausedVelocity -= second.acceleration;
-		float accCausedSepVelocity = Vector3.Dot(accCausedVelocity, contactNormal) * duration * GROUND_DAMPING;
+		float accCausedSepVelocity = Vector3.Dot(accCausedVelocity, contactNormal) * deltaTime * GROUND_DAMPING;
 
 		// If there's gravity causing the objects to move together.
 		if (accCausedSepVelocity < 0)
@@ -86,7 +86,7 @@ public class ParticleContact
 		}
 	}
 
-	private void ResolveInterpenetration(float duration)
+	private void ResolveInterpenetration(float deltaTime)
 	{
 		if (penetration <= 0) return;
 
