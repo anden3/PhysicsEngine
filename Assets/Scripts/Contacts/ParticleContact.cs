@@ -1,8 +1,18 @@
-﻿using UnityEngine;
+﻿/*
+ * Based on code by Ian Millington in Game Physics Engine Development.
+ *
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
 
 public class ParticleContact
 {
-	public Particle[] particle = new Particle[2];
+    // Used to maintain resting contact.
+    public const float GROUND_DAMPING = 4.0f;
+
+	public Particle first;
+	public Particle second;
 
 	public float restitution;
 	public float penetration;
@@ -14,10 +24,14 @@ public class ParticleContact
 		ResolveInterpenetration(duration);
 	}
 
+	/*
+	 * Calculate how quickly the particles move away from each other,
+	 * or towards each other if negative.
+	 */
 	public float CalculateSeparatingVelocity()
 	{
-		Vector3 relativeVelocity = particle[0].velocity;
-		if (particle[1]) relativeVelocity -= particle[1].velocity;
+		Vector3 relativeVelocity = first.velocity;
+		if (second) relativeVelocity -= second.velocity;
 
 		return Vector3.Dot(relativeVelocity, contactNormal);
 	}
@@ -32,20 +46,25 @@ public class ParticleContact
 			return;
 		}
 
+		// Get velocity after having "bounced".
 		float newSepVelocity = -separatingVelocity * restitution;
 
 		// Check the velocity caused by acceleration.
-		Vector3 accCausedVelocity = particle[0].acceleration;
-		if (particle[1]) accCausedVelocity -= particle[1].acceleration;
-		float accCausedSepVelocity = Vector3.Dot(accCausedVelocity, contactNormal) * duration;
+		Vector3 accCausedVelocity = first.acceleration;
+		if (second) accCausedVelocity -= second.acceleration;
+		float accCausedSepVelocity = Vector3.Dot(accCausedVelocity, contactNormal) * duration * GROUND_DAMPING;
 
+		// If there's gravity causing the objects to move together.
 		if (accCausedSepVelocity < 0)
 		{
-			// Keep objects in resting contact.
-			newSepVelocity += restitution * accCausedSepVelocity;
+            Debug.Log(newSepVelocity + " + " + accCausedSepVelocity + " = " + Mathf.Max(0, newSepVelocity + restitution * accCausedSepVelocity));
+
+            // Keep objects in resting contact.
+            newSepVelocity += restitution * accCausedSepVelocity;
 			if (newSepVelocity < 0) newSepVelocity = 0;
 		}
 
+		// Get difference between current velocity and post-bounce velocity.
 		float deltaVelocity = newSepVelocity - separatingVelocity;
 
 		float totalInverseMass = GetTotalIMass();
@@ -60,12 +79,12 @@ public class ParticleContact
 		Vector3 impulsePerIMass = contactNormal * impulse;
 
 		// Apply impulses
-		particle[0].velocity += impulsePerIMass * particle[0].inverseMass;
+		first.velocity += impulsePerIMass * first.inverseMass;
 
-		if (particle[1])
+		if (second)
 		{
 			// Opposite direction.
-			particle[1].velocity += impulsePerIMass * -particle[1].inverseMass;
+			second.velocity += impulsePerIMass * -second.inverseMass;
 		}
 	}
 
@@ -81,20 +100,20 @@ public class ParticleContact
 		// Find the amount of penetration resolution per unit of inverse mass.
 		Vector3 movePerIMass = contactNormal * (penetration / totalInverseMass);
 
-		particle[0].transform.localPosition
-			+= movePerIMass * particle[0].inverseMass;
+		first.transform.localPosition
+			+= movePerIMass * first.inverseMass;
 
-		if (particle[1])
+		if (second)
 		{
-			particle[1].transform.localPosition
-				+= movePerIMass * -particle[1].inverseMass;
+			second.transform.localPosition
+				+= movePerIMass * -second.inverseMass;
 		}
 	}
 
 	private float GetTotalIMass()
 	{
-		float totalInverseMass = particle[0].inverseMass;
-		if (particle[1]) totalInverseMass += particle[1].inverseMass;
+		float totalInverseMass = first.inverseMass;
+		if (second) totalInverseMass += second.inverseMass;
 
 		return totalInverseMass;
 	}

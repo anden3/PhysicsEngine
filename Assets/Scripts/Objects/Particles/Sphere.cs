@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿/*
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
 
 using System.Collections.Generic;
 
@@ -21,7 +25,7 @@ public class Sphere : Particle
 
 		ParticleContact contact = new ParticleContact();
 
-		contact.particle[0] = this;
+		contact.first = this;
 		contact.penetration = -bottom;
 		contact.contactNormal = Vector3.up;
 		contact.restitution = bounciness;

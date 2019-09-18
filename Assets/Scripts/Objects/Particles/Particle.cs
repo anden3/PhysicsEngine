@@ -1,4 +1,10 @@
-﻿using UnityEngine;
+﻿/*
+ * Based on code by Ian Millington in Game Physics Engine Development.
+ *
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
 
 using System.Collections.Generic;
 
@@ -16,7 +22,7 @@ public class Particle : MonoBehaviour
 
 	[Header("Starting Conditions")]
 	public Vector3 velocity;
-	public Vector3 acceleration { get; protected set; }
+	public Vector3 acceleration { get; set; }
 
 	protected Vector3 forceAccum;
 
@@ -25,7 +31,7 @@ public class Particle : MonoBehaviour
 	protected virtual void Awake()
 	{
 		inverseMass = 1.0f / mass;
-	}
+    }
 
 	public void AddForce(in Vector3 force)
 	{

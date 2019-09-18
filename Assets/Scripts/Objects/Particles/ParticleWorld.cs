@@ -1,8 +1,14 @@
-﻿using UnityEngine;
+﻿/*
+ * Based on code by Ian Millington in Game Physics Engine Development.
+ *
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
 
 using System.Collections.Generic;
 
-[RequireComponent(typeof(ParticleForceRegistry), typeof(ParticleContactResolver))]
+[RequireComponent(typeof(ParticleContactResolver))]
 public class ParticleWorld : MonoBehaviour
 {
 	public Vector3 gravity = new Vector3(0.0f, -9.82f, 0.0f);
@@ -11,31 +17,39 @@ public class ParticleWorld : MonoBehaviour
 
 	protected Particle[] particles;
 
-	private ParticleForceRegistry registry;
-	private ParticleContactResolver resolver;
+	private bool simulating;
 
-	// private List<ParticleContactGenerator> contactGenerators;
+	private ParticleContactResolver resolver;
 	private List<ParticleContact> contacts = new List<ParticleContact>();
+
+	public void StartSimulation() => simulating = true;
 
 	private void Awake()
 	{
-		registry = GetComponent<ParticleForceRegistry>();
 		resolver = GetComponent<ParticleContactResolver>();
 
 		particles = FindObjectsOfType<Particle>();
-		// TODO: contactGenerators = FindObjectsOfType<ParticleContactGenerator>();
 	}
 
-	private void FixedUpdate()
+    private void Start()
+    {
+        foreach (Particle p in particles)
+        {
+            p.acceleration = gravity;
+        }
+    }
+
+    private void FixedUpdate()
 	{
+		if (!simulating) return;
+
+        /*
 		// Add gravity to all particles.
 		foreach (Particle p in particles)
 		{
 			p.AddForce(gravity);
 		}
-
-		// Apply forces.
-		registry.UpdateForces(Time.fixedDeltaTime);
+        */
 
 		// Integrate particles.
 		Integrate(Time.fixedDeltaTime);
@@ -43,7 +57,9 @@ public class ParticleWorld : MonoBehaviour
 		// Generate contacts.
 		if (GenerateContacts() > 0)
 		{
-			if (calculateIterations) resolver.iterations = contacts.Count * 2;
+			if (calculateIterations)
+				resolver.iterations = contacts.Count * 2;
+
 			resolver.ResolveContacts(contacts, Time.fixedDeltaTime);
 		}
 	}
@@ -51,20 +67,6 @@ public class ParticleWorld : MonoBehaviour
 	private int GenerateContacts()
 	{
 		contacts.Clear();
-
-		/*
-		// Retrieve all new contacts from the generators.
-		foreach (ParticleContactGenerator g in contactGenerators)
-		{
-			foreach (var c in g.GetContacts())
-			{
-				contacts.Add(c);
-				if (--limit <= 0) goto limitReached;
-			}
-
-			if (limit <= 0) goto limitReached;
-		}
-		*/
 
 		foreach (Particle p in particles)
 		{
