@@ -16,6 +16,12 @@ public interface IMouseMessageTarget : IEventSystemHandler
 
 public class ParticleInteraction : MonoBehaviour, IMouseMessageTarget
 {
+    public enum Scenario
+    {
+        StraightDown,
+        Sideways
+    }
+
 	public ParticleWorld simulation;
 	public Particle particle;
 
@@ -104,25 +110,28 @@ public class ParticleInteraction : MonoBehaviour, IMouseMessageTarget
             mouseDown = false;
         }
     }
-    public void StraightDown()
+
+    public void LoadScenario(Scenario scenario)
     {
         handleInput = false;
         arrow.gameObject.SetActive(false);
 
-        particle.transform.position = new Vector3(0, Camera.main.transform.position.y, 60);
-        particle.velocity = Vector3.zero;
+        switch (scenario)
+        {
+            case Scenario.Sideways:
+                particle.transform.position = new Vector3(-10, Camera.main.transform.position.y, 60);
+                particle.velocity = new Vector3(5, 0, 0);
+                break;
+
+            case Scenario.StraightDown:
+                particle.transform.position = new Vector3(0, Camera.main.transform.position.y, 60);
+                particle.velocity = Vector3.zero;
+                break;
+        }
 
         simulation.StartSimulation();
     }
 
-    public void Sideways()
-    {
-        handleInput = false;
-        arrow.gameObject.SetActive(false);
-
-        particle.transform.position = new Vector3(-10, Camera.main.transform.position.y, 60);
-        particle.velocity = new Vector3(5, 0, 0);
-
-        simulation.StartSimulation();
-    }
+    public void Sideways() => LoadScenario(Scenario.Sideways);
+    public void StraightDown() => LoadScenario(Scenario.StraightDown);
 }
