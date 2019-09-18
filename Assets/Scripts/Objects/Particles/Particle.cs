@@ -77,7 +77,7 @@ public class Particle : MonoBehaviour
         textPos.y += 2;
         text.transform.position = Camera.main.WorldToScreenPoint(textPos);
 
-        text.text = $"Velocity: {((velocity.magnitude < 0.8f) ? Vector3.zero : velocity)}";
+        text.text = $"Velocity: {velocity}";
     }
 
     public virtual void GetContacts(ref List<ParticleContact> contacts) { }
