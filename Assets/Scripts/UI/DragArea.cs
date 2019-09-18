@@ -5,7 +5,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class DragArea : MonoBehaviour, IPointerDownHandler
+public class DragArea : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
 	private GameObject child;
 	private Vector3 mousePos;
@@ -24,8 +24,9 @@ public class DragArea : MonoBehaviour, IPointerDownHandler
 		}
 	}
 
-	public void OnPointerDown(PointerEventData evt)
-	{
-		ExecuteEvents.Execute<IMouseMessageTarget>(child, null, (x, y) => x.MouseDown());
-	}
+    public void OnPointerDown(PointerEventData evt)
+        => ExecuteEvents.Execute<IMouseMessageTarget>(child, null, (x, y) => x.MouseDown());
+
+    public void OnPointerUp(PointerEventData evt)
+        => ExecuteEvents.Execute<IMouseMessageTarget>(child, null, (x, y) => x.MouseUp());
 }

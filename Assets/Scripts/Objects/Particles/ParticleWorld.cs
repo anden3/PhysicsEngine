@@ -5,6 +5,7 @@
  */
 
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using System.Collections.Generic;
 
@@ -27,12 +28,12 @@ public class ParticleWorld : MonoBehaviour
 	private void Awake()
 	{
 		resolver = GetComponent<ParticleContactResolver>();
-
 		particles = FindObjectsOfType<Particle>();
 	}
 
     private void Start()
     {
+        // Set gravity of all particles.
         foreach (Particle p in particles)
         {
             p.acceleration = gravity;
@@ -43,20 +44,13 @@ public class ParticleWorld : MonoBehaviour
 	{
 		if (!simulating) return;
 
-        /*
-		// Add gravity to all particles.
-		foreach (Particle p in particles)
-		{
-			p.AddForce(gravity);
-		}
-        */
-
 		// Integrate particles.
 		Integrate(Time.fixedDeltaTime);
 
 		// Generate contacts.
 		if (GenerateContacts() > 0)
 		{
+            // Go with a dynamic iteration count instead of fixed.
 			if (calculateIterations)
 				resolver.iterations = contacts.Count * 2;
 
@@ -68,6 +62,7 @@ public class ParticleWorld : MonoBehaviour
 	{
 		contacts.Clear();
 
+        // Accumulate contacts.
 		foreach (Particle p in particles)
 		{
 			p.GetContacts(ref contacts);
@@ -84,4 +79,7 @@ public class ParticleWorld : MonoBehaviour
 			p.Integrate(duration);
 		}
 	}
+
+    public void Reset()
+        => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 }

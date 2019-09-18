@@ -57,8 +57,6 @@ public class ParticleContact
 		// If there's gravity causing the objects to move together.
 		if (accCausedSepVelocity < 0)
 		{
-            Debug.Log(newSepVelocity + " + " + accCausedSepVelocity + " = " + Mathf.Max(0, newSepVelocity + restitution * accCausedSepVelocity));
-
             // Keep objects in resting contact.
             newSepVelocity += restitution * accCausedSepVelocity;
 			if (newSepVelocity < 0) newSepVelocity = 0;

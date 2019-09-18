@@ -5,6 +5,7 @@
  */
 
 using UnityEngine;
+using UnityEngine.UI;
 
 using System.Collections.Generic;
 
@@ -17,6 +18,8 @@ public class Particle : MonoBehaviour
 	public float bounciness;
 	[Range(0.0f, 1.0f)]
 	public float damping;
+    [Range(0.0f, 1.0f)]
+    public float groundDamping;
 
 	public float inverseMass { get; protected set; }
 
@@ -24,7 +27,12 @@ public class Particle : MonoBehaviour
 	public Vector3 velocity;
 	public Vector3 acceleration { get; set; }
 
+    [Header("Object References")]
+    public Text text;
+
 	protected Vector3 forceAccum;
+
+    protected bool onGround;
 
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
@@ -33,12 +41,10 @@ public class Particle : MonoBehaviour
 		inverseMass = 1.0f / mass;
     }
 
-	public void AddForce(in Vector3 force)
-	{
-		forceAccum += force;
-	}
+    public void AddForce(in Vector3 force) => forceAccum += force;
+    protected void ClearAccumulator() => forceAccum = Vector3.zero;
 
-	public void Integrate(float duration)
+    public void Integrate(float duration)
 	{
 		Debug.Assert(duration > 0.0f);
 
@@ -58,14 +64,21 @@ public class Particle : MonoBehaviour
 		// Add drag.
 		velocity *= Mathf.Pow(damping, duration);
 
+        if (onGround)
+        {
+            velocity *= Mathf.Pow(groundDamping, duration);
+        }
+
 		// Clear forces.
 		ClearAccumulator();
-	}
 
-	protected void ClearAccumulator()
-	{
-		forceAccum = Vector3.zero;
-	}
+        //Update velocity text.
+        Vector3 textPos = transform.position;
+        textPos.y += 2;
+        text.transform.position = Camera.main.WorldToScreenPoint(textPos);
 
-	public virtual void GetContacts(ref List<ParticleContact> contacts) { }
+        text.text = $"Velocity: {((velocity.magnitude < 0.8f) ? Vector3.zero : velocity)}";
+    }
+
+    public virtual void GetContacts(ref List<ParticleContact> contacts) { }
 }

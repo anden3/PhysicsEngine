@@ -11,11 +11,10 @@ using System.Collections.Generic;
 public class ParticleContactResolver : MonoBehaviour
 {
 	public int iterations;
-	protected int iterationsUsed;
 
 	public void ResolveContacts(List<ParticleContact> contacts, float duration)
 	{
-		iterationsUsed = 0;
+        int iterationsUsed = 0;
 
 		while (iterationsUsed < iterations)
 		{

@@ -19,17 +19,17 @@ public class Sphere : Particle
 	public override void GetContacts(ref List<ParticleContact> contacts)
 	{
 		float bottom = transform.localPosition.y - radius;
+        onGround = bottom <= 0;
 
-		if (bottom > 0)
+		if (!onGround)
 			return;
 
-		ParticleContact contact = new ParticleContact();
-
-		contact.first = this;
-		contact.penetration = -bottom;
-		contact.contactNormal = Vector3.up;
-		contact.restitution = bounciness;
-
-		contacts.Add(contact);
+        contacts.Add(new ParticleContact
+        {
+            first = this,
+            penetration = -bottom,
+            contactNormal = Vector3.up,
+            restitution = bounciness
+        });
 	}
 }
