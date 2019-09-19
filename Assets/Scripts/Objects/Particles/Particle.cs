@@ -23,8 +23,12 @@ public class Particle : MonoBehaviour
 
 	public float inverseMass { get; protected set; }
 
-	[Header("Starting Conditions")]
-	public Vector3 velocity;
+	// [Header("Starting Conditions")]
+    public Vector3 velocity
+    {
+        get => GetVelocity();
+        set => SetVelocity(value);
+    }
 	public Vector3 acceleration { get; set; }
 
     [Header("Object References")]
@@ -35,17 +39,20 @@ public class Particle : MonoBehaviour
     protected bool onGround;
     protected Vector3 startPosition;
 
+    protected Vector3 lastPos;
+
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
 	protected virtual void Awake()
 	{
 		inverseMass = 1.0f / mass;
-        startPosition = transform.position;
+        startPosition = transform.localPosition;
+        lastPos = startPosition;
     }
 
     public virtual void Reset()
     {
-        transform.position = startPosition;
+        transform.localPosition = startPosition;
         velocity = Vector3.zero;
         onGround = false;
         text.text = "";
@@ -60,20 +67,36 @@ public class Particle : MonoBehaviour
         inverseMass = 1.0f / mass;
     }
 
+    public Vector3 GetVelocity()
+        => (transform.localPosition - lastPos) * Time.fixedDeltaTime;
+
+    public void SetVelocity(Vector3 v)
+    {
+
+    }
+
     public void Integrate(float deltaTime)
 	{
-		Debug.Assert(deltaTime > 0.0f);
+        // Only accept finite masses.
+        if (!HasFiniteMass()) return;
 
-		// Only accept finite masses.
-		if (!HasFiniteMass()) return;
+        /*
+        // Update position.
+		transform.position += velocity * deltaTime; 
+        */
 
-		// Update position.
-		transform.position += velocity * deltaTime;
+        // Get acceleration from forces.
+        Vector3 resultingAcc = acceleration;
+        resultingAcc += forceAccum * inverseMass;
 
-		// Get acceleration from forces.
-		Vector3 resultingAcc = acceleration;
-		resultingAcc += forceAccum * inverseMass;
+        Vector3 pos = transform.localPosition;
 
+        transform.localPosition += pos - lastPos
+            + resultingAcc * deltaTime * deltaTime;
+
+        lastPos = pos;
+
+        /*
 		// Update velocity.
 		velocity += resultingAcc * deltaTime;
 
@@ -85,9 +108,10 @@ public class Particle : MonoBehaviour
             // Simulate friction.
             velocity *= Mathf.Pow(groundFrictionCoef, deltaTime);
         }
+        */
 
-		// Clear forces.
-		ClearAccumulator();
+        // Clear forces.
+        ClearAccumulator();
 
         //Update velocity text.
         Vector3 textPos = transform.position;
