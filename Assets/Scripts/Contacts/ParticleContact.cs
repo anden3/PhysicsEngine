@@ -98,14 +98,10 @@ public class ParticleContact
 		// Find the amount of penetration resolution per unit of inverse mass.
 		Vector3 movePerIMass = contactNormal * (penetration / totalInverseMass);
 
-		first.transform.localPosition
-			+= movePerIMass * first.inverseMass;
+		first.position += movePerIMass * first.inverseMass;
 
 		if (second)
-		{
-			second.transform.localPosition
-				+= movePerIMass * -second.inverseMass;
-		}
+            second.position += movePerIMass * -second.inverseMass;
 	}
 
 	private float GetTotalIMass()

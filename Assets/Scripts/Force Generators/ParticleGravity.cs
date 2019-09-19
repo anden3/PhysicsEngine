@@ -1,23 +1,10 @@
 ﻿using UnityEngine;
 
-[RequireComponent(typeof(Particle))]
-public class ParticleGravity : MonoBehaviour, ParticleForceGenerator
+public class ParticleGravity : ParticleForceGenerator
 {
 	public Vector3 gravity;
 
-	private Particle particle;
-
-	private void Awake()
-	{
-		particle = GetComponent<Particle>();
-	}
-
-	private void Start()
-	{
-		ParticleForceRegistry.registry.Add(particle, this);
-	}
-
-	public void UpdateForce(Particle particle, float duration)
+	public override void UpdateForce(float deltaTime)
 	{
 		if (!particle.HasFiniteMass()) return;
 

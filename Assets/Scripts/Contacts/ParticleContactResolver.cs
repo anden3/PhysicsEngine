@@ -8,15 +8,43 @@ using UnityEngine;
 
 using System.Collections.Generic;
 
+public interface IParticleContactGenerator
+{
+    void GetContacts(ref List<ParticleContact> contacts);
+}
+
 public class ParticleContactResolver : MonoBehaviour
 {
-	public int iterations;
+    private static List<IParticleContactGenerator> generators = new List<IParticleContactGenerator>();
 
-	public void ResolveContacts(List<ParticleContact> contacts, float duration)
+    public static void Register(IParticleContactGenerator gen)
+        => generators.Add(gen);
+
+    public static void Unregister(IParticleContactGenerator gen)
+        => generators.Remove(gen);
+
+    public int iterations;
+    public bool autoIterations;
+
+    private List<ParticleContact> contacts = new List<ParticleContact>();
+
+    private void GenerateContacts()
+    {
+        contacts.Clear();
+
+        // Accumulate contacts.
+        foreach (var gen in generators)
+        {
+            gen.GetContacts(ref contacts);
+        }
+    }
+
+    public void ResolveContacts(float deltaTime)
 	{
         int iterationsUsed = 0;
+        int iterMax = autoIterations ? contacts.Count * 2 : iterations;
 
-		while (iterationsUsed < iterations)
+		while (iterationsUsed < iterMax)
 		{
 			// Find contact with largest closing velocity (largest negative value).
 			float max = float.MaxValue;
@@ -37,7 +65,7 @@ public class ParticleContactResolver : MonoBehaviour
 			if (maxIndex == contacts.Count) break;
 
 			// Resolve the contact.
-			contacts[maxIndex].Resolve(duration);
+			contacts[maxIndex].Resolve(deltaTime);
 			iterationsUsed++;
 		}
 	}

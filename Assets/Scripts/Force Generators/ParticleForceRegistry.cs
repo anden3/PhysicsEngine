@@ -1,55 +1,29 @@
-﻿using UnityEngine;
+﻿/*
+ * Based on code by Ian Millington in Game Physics Engine Development.
+ *
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
+
 using System.Collections.Generic;
 
 // Holds all the force generators and the particles that they apply to.
 public class ParticleForceRegistry : MonoBehaviour
 {
-	public static ParticleForceRegistry registry = null;
+    private static List<ParticleForceGenerator> generators;
 
-    protected struct ParticleForceRegistration
+    public static void Register(ParticleForceGenerator gen)
+        => generators.Add(gen);
+
+    public static void Unregister(ParticleForceGenerator gen)
+        => generators.Remove(gen);
+
+    public void UpdateForces(float deltaTime)
 	{
-		public Particle particle;
-		public ParticleForceGenerator fg;
-	}
-
-	protected List<ParticleForceRegistration> registrations = new List<ParticleForceRegistration>();
-
-	private void Awake()
-	{
-		if (registry == null)
+		foreach (ParticleForceGenerator gen in generators)
 		{
-			registry = this;
-		}
-		else
-		{
-			Destroy(gameObject);
-		}
-	}
-
-	public void Add(Particle particle, ParticleForceGenerator fg)
-	{
-		registrations.Add(new ParticleForceRegistration { particle = particle, fg = fg });
-	}
-
-	public void Remove(Particle particle, ParticleForceGenerator fg)
-	{
-		registrations.Remove(new ParticleForceRegistration { particle = particle, fg = fg });
-	}
-
-	public void Clear() => registrations.Clear();
-
-	/*
-	private void FixedUpdate()
-	{
-		UpdateForces(Time.fixedDeltaTime);
-	}
-	*/
-
-	public void UpdateForces(float duration)
-	{
-		foreach (ParticleForceRegistration reg in registrations)
-		{
-			reg.fg.UpdateForce(reg.particle, duration);
+            gen.UpdateForce(deltaTime);
 		}
 	}
 }

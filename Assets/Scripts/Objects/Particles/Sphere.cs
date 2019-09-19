@@ -18,7 +18,7 @@ public class Sphere : Particle
 
 	public override void GetContacts(ref List<ParticleContact> contacts)
 	{
-		float bottom = transform.localPosition.y - radius;
+		float bottom = position.y - radius;
         onGround = bottom <= 0;
 
 		if (!onGround)

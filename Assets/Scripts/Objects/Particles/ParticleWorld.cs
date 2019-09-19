@@ -7,27 +7,28 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-using System.Collections.Generic;
-
-[RequireComponent(typeof(ParticleContactResolver))]
+[RequireComponent(
+    typeof(ParticleContactResolver),
+    typeof(ParticleForceRegistry)
+)]
 public class ParticleWorld : MonoBehaviour
 {
 	public Vector3 gravity = new Vector3(0.0f, -9.82f, 0.0f);
-
-	public bool calculateIterations;
 
 	protected Particle[] particles;
 
 	private bool simulating;
 
-	private ParticleContactResolver resolver;
-	private List<ParticleContact> contacts = new List<ParticleContact>();
+    private ParticleForceRegistry registry;
+    private ParticleContactResolver resolver;
 
 	public void StartSimulation() => simulating = true;
 
 	private void Awake()
 	{
+        registry = GetComponent<ParticleForceRegistry>();
 		resolver = GetComponent<ParticleContactResolver>();
+
 		particles = FindObjectsOfType<Particle>();
 	}
 
@@ -44,37 +45,17 @@ public class ParticleWorld : MonoBehaviour
 	{
 		if (!simulating) return;
 
+        // Update all force generators.
+        registry.UpdateForces(Time.fixedDeltaTime);
+
 		// Integrate particles.
 		Integrate(Time.fixedDeltaTime);
-
-		// Generate contacts.
-		if (GenerateContacts() > 0)
-		{
-            // Go with a dynamic iteration count instead of fixed.
-			if (calculateIterations)
-				resolver.iterations = contacts.Count * 2;
-
-			resolver.ResolveContacts(contacts, Time.fixedDeltaTime);
-		}
-	}
-
-	private int GenerateContacts()
-	{
-		contacts.Clear();
-
-        // Accumulate contacts.
-		foreach (Particle p in particles)
-		{
-			p.GetContacts(ref contacts);
-		}
-
-		// Return number of contacts used.
-		return contacts.Count;
-	}
+        resolver.ResolveContacts(Time.fixedDeltaTime);
+    }
 
 	private void Integrate(float duration)
 	{
-		foreach (Particle p in particles)
+        foreach (Particle p in particles)
 		{
 			p.Integrate(duration);
 		}

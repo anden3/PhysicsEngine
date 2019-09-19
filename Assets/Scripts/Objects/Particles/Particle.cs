@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 using System.Collections.Generic;
 
-public class Particle : MonoBehaviour
+public class Particle : MonoBehaviour, IParticleContactGenerator
 {
 	[Header("Physical Properties")]
 	public float mass;
@@ -22,6 +22,11 @@ public class Particle : MonoBehaviour
     public float groundDamping;
 
 	public float inverseMass { get; protected set; }
+    public Vector3 position
+    {
+        get => transform.localPosition;
+        set => transform.localPosition = value;
+    }
 
 	[Header("Starting Conditions")]
 	public Vector3 velocity;
@@ -40,6 +45,9 @@ public class Particle : MonoBehaviour
 	{
 		inverseMass = 1.0f / mass;
     }
+
+    private void Start() => ParticleContactResolver.Register(this);
+    private void OnDestroy() => ParticleContactResolver.Unregister(this);
 
     public void AddForce(in Vector3 force) => forceAccum += force;
     protected void ClearAccumulator() => forceAccum = Vector3.zero;
