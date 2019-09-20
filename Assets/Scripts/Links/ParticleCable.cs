@@ -8,11 +8,20 @@ using UnityEngine;
 
 using System.Collections.Generic;
 
+[AddComponentMenu("Particle Physics/Connectors/Cable")]
 public class ParticleCable : ParticleLink
 {
     [Header("Cable Settings")]
     public float maxLength;
     public float restitution;
+
+    private void OnValidate()
+    {
+        if (first != null && second != null && maxLength == 0)
+        {
+            maxLength = Vector3.Distance(first.position, second.position);
+        }
+    }
 
     public override void GetContacts(ref List<ParticleContact> contacts)
     {

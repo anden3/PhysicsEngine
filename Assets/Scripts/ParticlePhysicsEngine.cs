@@ -7,20 +7,36 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+using System.Collections.Generic;
+
 [RequireComponent(
     typeof(ParticleContactResolver),
     typeof(ParticleForceRegistry)
 )]
-public class ParticleWorld : MonoBehaviour
+[AddComponentMenu("Particle Physics/Particle Physics Engine")]
+public class ParticlePhysicsEngine : MonoBehaviour
 {
+    [Header("Global Settings")]
 	public Vector3 gravity = new Vector3(0.0f, -9.82f, 0.0f);
-
-	protected Particle[] particles;
+    public bool playOnAwake = true;
 
 	private bool simulating;
 
     private ParticleForceRegistry registry;
     private ParticleContactResolver resolver;
+
+    private static List<Particle> particles = new List<Particle>();
+
+    public static void Register(Particle p)
+    {
+        particles.Add(p);
+        ParticleContactResolver.Register(p);
+    }
+    public static void Unregister(Particle p)
+    {
+        particles.Remove(p);
+        ParticleContactResolver.Unregister(p);
+    }
 
 	public void StartSimulation() => simulating = true;
 
@@ -29,7 +45,7 @@ public class ParticleWorld : MonoBehaviour
         registry = GetComponent<ParticleForceRegistry>();
 		resolver = GetComponent<ParticleContactResolver>();
 
-		particles = FindObjectsOfType<Particle>();
+        simulating = playOnAwake;
 	}
 
     private void Start()
@@ -61,6 +77,6 @@ public class ParticleWorld : MonoBehaviour
 		}
 	}
 
-    public void Reset()
+    public void ResetSimulation()
         => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 }

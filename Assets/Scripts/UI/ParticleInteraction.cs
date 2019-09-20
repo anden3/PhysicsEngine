@@ -16,7 +16,7 @@ public interface IMouseMessageTarget : IEventSystemHandler
 
 public class ParticleInteraction : MonoBehaviour, IMouseMessageTarget
 {
-	public ParticleWorld simulation;
+	public ParticlePhysicsEngine simulation;
 	public Particle particle;
 
     private bool mouseDown;

@@ -40,53 +40,6 @@ public class BVHNode
 	public bool IsLeaf() => body != null;
 	public bool Overlaps(BVHNode other) => volume.Overlaps(other.volume);
 
-    public void Insert(RigidBody newBody, BoundingVolume newVolume)
-    {
-        if (IsLeaf())
-        {
-            left = new BVHNode(this, body, volume);
-            right = new BVHNode(this, newBody, newVolume);
-
-            body = null;
-
-            RecalculateBoundingVolume();
-        }
-        else
-        {
-            // Pick child that will grow the least.
-            if ( left.volume.GetGrowth(newVolume) <
-                right.volume.GetGrowth(newVolume))
-            {
-                left.Insert(newBody, newVolume);
-            }
-            else
-            {
-                right.Insert(newBody, newVolume);
-            }
-        }
-    }
-
-    public void Remove()
-    {
-        if (parent != null)
-        {
-            BVHNode sibling = GetSibling();
-
-            // Copy sibling data to parent.
-            parent.body = sibling.body;
-            parent.volume = sibling.volume;
-            parent.left = sibling.left;
-            parent.right = sibling.right;
-
-            // "Delete" sibling. This is C# tho, so can't do that.
-            // Let's just hope the GC gets it.
-
-            parent.RecalculateBoundingVolume();
-        }
-
-        // "Delete" children.
-    }
-
 	public void GetPotentialContacts(ref List<PotentialContact> contacts)
 	{
 		if (IsLeaf()) return;
@@ -117,16 +70,74 @@ public class BVHNode
 		}
 	}
 
-    private void RecalculateBoundingVolume()
+    public void RecalculateBoundingVolume()
     {
         // Generate a volume incorporating both children.
         throw new System.NotImplementedException();
     }
 
-    private BVHNode GetSibling()
+    public BVHNode GetSibling()
     {
         if (parent == null)      return null;
         if (parent.left == this) return parent.right;
         else                     return parent.left;
+    }
+
+    // Pick child that will grow the least.
+    public BVHNode GetChildWithLowestGrowth(BoundingVolume newVol)
+    {
+        if (IsLeaf()) return null;
+
+        return (
+              left.volume.GetGrowth(newVol)
+            < right.volume.GetGrowth(newVol)
+            ) ? left : right;
+    }
+}
+
+public class BVHTree
+{
+    private SortedSet<BVHNode> nodes = new SortedSet<BVHNode>();
+
+    public void Insert(BVHNode node, RigidBody newBody, BoundingVolume newVolume)
+    {
+        if (node.IsLeaf())
+        {
+            node.left = new BVHNode(node, node.body, node.volume);
+            node.right = new BVHNode(node, newBody, newVolume);
+
+            nodes.Add(node.left);
+            nodes.Add(node.right);
+
+            node.body = null;
+
+            node.RecalculateBoundingVolume();
+        }
+        else
+        {
+            Insert(node.GetChildWithLowestGrowth(newVolume), newBody, newVolume);
+        }
+    }
+
+    public void Remove(BVHNode node)
+    {
+        if (node.parent != null)
+        {
+            BVHNode parent = node.parent;
+            BVHNode sibling = node.GetSibling();
+
+            // Copy sibling data to parent.
+            parent.body = sibling.body;
+            parent.volume = sibling.volume;
+            parent.left = sibling.left;
+            parent.right = sibling.right;
+
+            nodes.Remove(sibling);
+
+            parent.RecalculateBoundingVolume();
+        }
+
+        nodes.Remove(node.left);
+        nodes.Remove(node.right);
     }
 }

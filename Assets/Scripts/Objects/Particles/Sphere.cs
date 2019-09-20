@@ -6,10 +6,11 @@ using UnityEngine;
 
 using System.Collections.Generic;
 
+[AddComponentMenu("Particle Physics/Objects/Sphere")]
 public class Sphere : Particle
 {
 	[Header("Specific Properties")]
-	public float radius;
+	public float radius = 0.5f;
 
 	private void OnValidate()
 	{

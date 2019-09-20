@@ -8,10 +8,19 @@ using UnityEngine;
 
 using System.Collections.Generic;
 
-public class ParticleRod : ParticleLink
+[AddComponentMenu("Particle Physics/Connectors/Rod")]
+public class ParticleRod : ParticleLink, IParticleContactGenerator
 {
     [Header("Rod Settings")]
     public float length;
+
+    private void OnValidate()
+    {
+        if (first != null && second != null && length == 0)
+        {
+            length = Vector3.Distance(first.position, second.position);
+        }
+    }
 
     public override void GetContacts(ref List<ParticleContact> contacts)
     {

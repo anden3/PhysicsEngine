@@ -9,9 +9,11 @@ using UnityEngine;
 using System.Collections.Generic;
 
 // Holds all the force generators and the particles that they apply to.
+[AddComponentMenu("Particle Physics/Force Generators/Force Generator Registry")]
 public class ParticleForceRegistry : MonoBehaviour
 {
-    private static List<ParticleForceGenerator> generators;
+    private static List<ParticleForceGenerator> generators
+        = new List<ParticleForceGenerator>();
 
     public static void Register(ParticleForceGenerator gen)
         => generators.Add(gen);

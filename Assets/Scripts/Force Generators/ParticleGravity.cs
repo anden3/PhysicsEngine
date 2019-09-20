@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[AddComponentMenu("Particle Physics/Force Generators/Gravity")]
 public class ParticleGravity : ParticleForceGenerator
 {
 	public Vector3 gravity;

@@ -6,6 +6,7 @@
 
 using UnityEngine;
 
+[AddComponentMenu("Particle Physics/Connectors/Bungee")]
 public class ParticleBungee : ParticleForceGenerator
 {
     [Header("Connection Settings")]

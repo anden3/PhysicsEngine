@@ -6,6 +6,7 @@
 
 using UnityEngine;
 
+[AddComponentMenu("Particle Physics/Connectors/Anchored Spring")]
 public class ParticleAnchoredSpring : ParticleForceGenerator
 {
     [Header("Connection Settings")]
@@ -18,7 +19,7 @@ public class ParticleAnchoredSpring : ParticleForceGenerator
     public override void UpdateForce(float deltaTime)
     {
         Vector3 springVec = particle.position - anchor;
-        float length = Mathf.Abs(springVec.magnitude - restLength) * springConstant;
+        float length = (springVec.magnitude - restLength) * springConstant;
 
         particle.AddForce(springVec.normalized * -length);
     }

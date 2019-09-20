@@ -6,6 +6,7 @@
 
 using UnityEngine;
 
+[AddComponentMenu("Rigid Body Physics/Colliders/Sphere")]
 public class BoundingSphere : BoundingVolume
 {
 	public Vector3 center;

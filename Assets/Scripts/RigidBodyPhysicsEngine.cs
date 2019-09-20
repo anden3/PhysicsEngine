@@ -2,7 +2,8 @@
 
 using System.Collections.Generic;
 
-public class World : MonoBehaviour
+[AddComponentMenu("Rigid Body Physics/Rigid Body Physics Engine")]
+public class RigidBodyPhysicsEngine : MonoBehaviour
 {
 	public List<RigidBody> bodies;
 

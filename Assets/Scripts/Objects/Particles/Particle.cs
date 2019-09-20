@@ -12,14 +12,14 @@ using System.Collections.Generic;
 public class Particle : MonoBehaviour, IParticleContactGenerator
 {
 	[Header("Physical Properties")]
-	public float mass;
+	public float mass = 1;
 
 	[Range(0.0f, 1.0f)]
-	public float bounciness;
+	public float bounciness = 0.5f;
 	[Range(0.0f, 1.0f)]
-	public float damping;
+	public float damping = 0.5f;
     [Range(0.0f, 1.0f)]
-    public float groundDamping;
+    public float groundDamping = 0.5f;
 
 	public float inverseMass { get; protected set; }
     public Vector3 position
@@ -32,9 +32,6 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 	public Vector3 velocity;
 	public Vector3 acceleration { get; set; }
 
-    [Header("Object References")]
-    public Text text;
-
 	protected Vector3 forceAccum;
 
     protected bool onGround;
@@ -46,8 +43,8 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 		inverseMass = 1.0f / mass;
     }
 
-    private void Start() => ParticleContactResolver.Register(this);
-    private void OnDestroy() => ParticleContactResolver.Unregister(this);
+    private void Start() => ParticlePhysicsEngine.Register(this);
+    private void OnDestroy() => ParticlePhysicsEngine.Unregister(this);
 
     public void AddForce(in Vector3 force) => forceAccum += force;
     protected void ClearAccumulator() => forceAccum = Vector3.zero;
@@ -79,13 +76,6 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 
 		// Clear forces.
 		ClearAccumulator();
-
-        //Update velocity text.
-        Vector3 textPos = transform.position;
-        textPos.y += 2;
-        text.transform.position = Camera.main.WorldToScreenPoint(textPos);
-
-        text.text = $"Velocity: {((velocity.magnitude < 0.8f) ? Vector3.zero : velocity)}";
     }
 
     public virtual void GetContacts(ref List<ParticleContact> contacts) { }

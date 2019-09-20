@@ -6,6 +6,7 @@
 
 using UnityEngine;
 
+[AddComponentMenu("Particle Physics/Connectors/Spring")]
 public class ParticleSpring : ParticleForceGenerator
 {
     [Header("Connection Settings")]
@@ -15,10 +16,18 @@ public class ParticleSpring : ParticleForceGenerator
     public float springConstant;
     public float restLength;
 
+    private void OnValidate()
+    {
+        if (other != null && restLength == 0)
+        {
+            restLength = Vector3.Distance(transform.localPosition, other.position);
+        }
+    }
+
     public override void UpdateForce(float deltaTime)
     {
         Vector3 springVec = particle.position - other.position;
-        float length = Mathf.Abs(springVec.magnitude - restLength) * springConstant;
+        float length = (springVec.magnitude - restLength) * springConstant;
 
         particle.AddForce(springVec.normalized * -length);
     }

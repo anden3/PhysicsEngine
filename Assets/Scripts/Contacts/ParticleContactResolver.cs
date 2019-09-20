@@ -13,9 +13,11 @@ public interface IParticleContactGenerator
     void GetContacts(ref List<ParticleContact> contacts);
 }
 
+[AddComponentMenu("Particle Physics/Contacts/Contact Resolver")]
 public class ParticleContactResolver : MonoBehaviour
 {
-    private static List<IParticleContactGenerator> generators = new List<IParticleContactGenerator>();
+    private static List<IParticleContactGenerator> generators
+        = new List<IParticleContactGenerator>();
 
     public static void Register(IParticleContactGenerator gen)
         => generators.Add(gen);
@@ -24,7 +26,7 @@ public class ParticleContactResolver : MonoBehaviour
         => generators.Remove(gen);
 
     public int iterations;
-    public bool autoIterations;
+    public bool autoIterations = true;
 
     private List<ParticleContact> contacts = new List<ParticleContact>();
 
@@ -41,6 +43,8 @@ public class ParticleContactResolver : MonoBehaviour
 
     public void ResolveContacts(float deltaTime)
 	{
+        GenerateContacts();
+
         int iterationsUsed = 0;
         int iterMax = autoIterations ? contacts.Count * 2 : iterations;
 
