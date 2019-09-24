@@ -27,8 +27,8 @@ public class ParticleSpring : ParticleForceGenerator
     public override void UpdateForce(float deltaTime)
     {
         Vector3 springVec = particle.position - other.position;
-        float length = (springVec.magnitude - restLength) * springConstant;
+        float force = (springVec.magnitude - restLength) * springConstant;
 
-        particle.AddForce(springVec.normalized * -length);
+        particle.AddForce(springVec.normalized * -force);
     }
 }

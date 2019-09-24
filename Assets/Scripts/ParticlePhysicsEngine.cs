@@ -78,5 +78,11 @@ public class ParticlePhysicsEngine : MonoBehaviour
 	}
 
     public void ResetSimulation()
-        => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    {
+        foreach (Particle p in particles)
+        {
+            p.ParticleReset();
+        }
+
+    }
 }

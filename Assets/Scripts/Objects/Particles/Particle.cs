@@ -21,6 +21,8 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     [Range(0.0f, 1.0f)]
     public float groundDamping = 0.5f;
 
+    private Vector3 startPos;
+
 	public float inverseMass { get; protected set; }
     public Vector3 position
     {
@@ -41,6 +43,8 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 	protected virtual void Awake()
 	{
 		inverseMass = 1.0f / mass;
+        startPos = transform.position;
+
     }
 
     private void Start() => ParticlePhysicsEngine.Register(this);
@@ -79,4 +83,13 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     }
 
     public virtual void GetContacts(ref List<ParticleContact> contacts) { }
+
+    public void ParticleReset()
+    {
+        transform.position = startPos;
+        velocity = Vector3.zero;
+        acceleration = Vector3.zero;
+        forceAccum = Vector3.zero;
+
+    }
 }

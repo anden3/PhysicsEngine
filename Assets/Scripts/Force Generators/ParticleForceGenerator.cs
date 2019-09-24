@@ -6,12 +6,11 @@
 
 using UnityEngine;
 
-[RequireComponent(typeof(Particle))]
 public class ParticleForceGenerator : MonoBehaviour
 {
     protected Particle particle;
 
-    private void Awake()
+    protected virtual void Awake()
     {
         particle = GetComponent<Particle>();
     }
