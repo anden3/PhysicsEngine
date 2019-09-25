@@ -5,7 +5,6 @@
  */
 
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 using System.Collections.Generic;
 
@@ -77,12 +76,19 @@ public class ParticlePhysicsEngine : MonoBehaviour
 		}
 	}
 
+    public void SetDamping(float damping)
+    {
+        foreach (Particle p in particles)
+        {
+            p.damping = damping;
+        }
+    }
+
     public void ResetSimulation()
     {
         foreach (Particle p in particles)
         {
             p.ParticleReset();
         }
-
     }
 }

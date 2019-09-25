@@ -8,6 +8,7 @@ using UnityEngine;
 public class Draggable : MonoBehaviour
 {
     public float dragCoefficient;
+    public Texture2D dragCursor;
 
     private Sphere particle;
 
@@ -23,6 +24,7 @@ public class Draggable : MonoBehaviour
     {
         if (!Input.GetMouseButton(0))
         {
+            Cursor.SetCursor(null, Vector3.zero, CursorMode.Auto);
             dragging = false;
             return;
         }
@@ -35,6 +37,12 @@ public class Draggable : MonoBehaviour
         if (!dragging && dragDist.sqrMagnitude <= (particle.radius * particle.radius))
         {
             dragging = true;
+
+            Cursor.SetCursor(
+                dragCursor,
+                new Vector2(dragCursor.width / 2, dragCursor.height / 2),
+                CursorMode.Auto
+            );
         }
     }
 

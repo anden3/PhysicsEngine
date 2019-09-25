@@ -43,10 +43,4 @@ public class ParticleStandaloneSpring : ParticleForceGenerator
         newScale.y = springVec.magnitude * 0.5f;
         transform.localScale = newScale;
     }
-
-    public void SetSpringConstant(float value)
-        => springConstant =  value;
-
-    public void SetSpringConstant(string value)
-        => SetSpringConstant(float.Parse(value));
 }
