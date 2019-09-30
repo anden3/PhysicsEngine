@@ -29,16 +29,19 @@ public class ParticleStandaloneSpring : ParticleForceGenerator
 
     public override void UpdateForce(float deltaTime)
     {
+        // Get the force from the spring according to Hooke's law.
         Vector3 springVec = first.position - second.position;
         float force = (springVec.magnitude - restLength) * springConstant;
 
+        // Add forces to the particles.
         first.AddForce(springVec.normalized * -force);
         second.AddForce(springVec.normalized * force);
 
-        // Move spring between the particles.
+        // Move and rotate spring object between the particles.
         transform.localPosition = Vector3.Lerp(first.position, second.position, 0.5f);
         transform.localRotation = Quaternion.FromToRotation(Vector3.up, springVec);
 
+        // Make spring object properly scaled.
         Vector3 newScale = transform.localScale;
         newScale.y = springVec.magnitude * 0.5f;
         transform.localScale = newScale;
