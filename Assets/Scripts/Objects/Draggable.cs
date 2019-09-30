@@ -50,7 +50,6 @@ public class Draggable : MonoBehaviour
     {
         if (dragging)
         {
-            Debug.Log(dragDist * dragCoefficient);
             particle.AddForce(dragDist * dragCoefficient);
         }
     }

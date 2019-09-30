@@ -5,11 +5,10 @@
  */
 
 using UnityEngine;
-using UnityEngine.UI;
 
 using System.Collections.Generic;
 
-public class Particle : MonoBehaviour, IParticleContactGenerator
+public class Particle : MonoBehaviour
 {
 	[Header("Physical Properties")]
 	public float mass = 1;
@@ -82,14 +81,11 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 		ClearAccumulator();
     }
 
-    public virtual void GetContacts(ref List<ParticleContact> contacts) { }
-
     public void ParticleReset()
     {
         transform.position = startPos;
         velocity = Vector3.zero;
         acceleration = Vector3.zero;
         forceAccum = Vector3.zero;
-
     }
 }

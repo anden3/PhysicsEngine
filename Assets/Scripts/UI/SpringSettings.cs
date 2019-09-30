@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿/*
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
 using UnityEngine.UI;
 
 public class SpringSettings : MonoBehaviour
