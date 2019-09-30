@@ -71,7 +71,7 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 		velocity += resultingAcc * duration;
 
 		// Add drag.
-		velocity *= Mathf.Pow(damping, duration);
+		velocity *= Mathf.Pow(1 - damping, duration);
 
         if (onGround)
         {
