@@ -5,21 +5,14 @@
  */
 
 using UnityEngine;
-using UnityEngine.UI;
 
 using System.Collections.Generic;
 
 public class Particle : MonoBehaviour, IParticleContactGenerator
 {
-	[Header("Physical Properties")]
-	public float mass = 1;
-
-	[Range(0.0f, 1.0f)]
-	public float bounciness = 0.5f;
-	[Range(0.0f, 1.0f)]
-	public float damping = 0.5f;
-    [Range(0.0f, 1.0f)]
-    public float groundDamping = 0.5f;
+    [Header("Physical Properties")]
+    [Tooltip("Mass (10¹⁰ kg).")]
+    public float mass;
 
     private Vector3 startPos;
 
@@ -31,12 +24,10 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     }
 
 	[Header("Starting Conditions")]
-	public Vector3 velocity;
-	public Vector3 acceleration { get; set; }
+    public Vector3 velocity;
+	public Vector3 acceleration { get; protected set; }
 
 	protected Vector3 forceAccum;
-
-    protected bool onGround;
 
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
@@ -44,7 +35,6 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 	{
 		inverseMass = 1.0f / mass;
         startPos = transform.position;
-
     }
 
     private void Start() => ParticlePhysicsEngine.Register(this);
@@ -53,33 +43,18 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     public void AddForce(in Vector3 force) => forceAccum += force;
     protected void ClearAccumulator() => forceAccum = Vector3.zero;
 
-    public void Integrate(float duration)
+    public void Integrate(float deltaTime)
 	{
-		Debug.Assert(duration > 0.0f);
-
-		// Only accept finite masses.
 		if (!HasFiniteMass()) return;
 
-		// Update position.
-		transform.position += velocity * duration;
+		transform.position += velocity * deltaTime;
 
-		// Get acceleration from forces.
 		Vector3 resultingAcc = acceleration;
 		resultingAcc += forceAccum * inverseMass;
 
-		// Update velocity.
-		velocity += resultingAcc * duration;
+		velocity += resultingAcc * deltaTime;
 
-		// Add drag.
-		velocity *= Mathf.Pow(1 - damping, duration);
-
-        if (onGround)
-        {
-            velocity *= Mathf.Pow(groundDamping, duration);
-        }
-
-		// Clear forces.
-		ClearAccumulator();
+        ClearAccumulator();
     }
 
     public virtual void GetContacts(ref List<ParticleContact> contacts) { }
@@ -90,6 +65,5 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
         velocity = Vector3.zero;
         acceleration = Vector3.zero;
         forceAccum = Vector3.zero;
-
     }
 }

@@ -15,8 +15,9 @@ public class ParticleForceGenerator : MonoBehaviour
         particle = GetComponent<Particle>();
     }
 
-    private void Start() => ParticleForceRegistry.Register(this);
-    private void OnDestroy() => ParticleForceRegistry.Unregister(this);
+    private void OnEnable() => ParticleForceRegistry.Register(this);
+
+    private void OnDisable() => ParticleForceRegistry.Unregister(this);
 
     public virtual void UpdateForce(float deltaTime) { }
 }

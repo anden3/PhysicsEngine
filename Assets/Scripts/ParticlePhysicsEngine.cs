@@ -16,7 +16,7 @@ using System.Collections.Generic;
 public class ParticlePhysicsEngine : MonoBehaviour
 {
     [Header("Global Settings")]
-	public Vector3 gravity = new Vector3(0.0f, -9.82f, 0.0f);
+    public float timeScale = 1.0f;
     public bool playOnAwake = true;
 
 	private bool simulating;
@@ -49,11 +49,13 @@ public class ParticlePhysicsEngine : MonoBehaviour
 
     private void Start()
     {
+        /*
         // Set gravity of all particles.
         foreach (Particle p in particles)
         {
             p.acceleration = gravity;
         }
+        */
     }
 
     private void FixedUpdate()
@@ -61,11 +63,11 @@ public class ParticlePhysicsEngine : MonoBehaviour
 		if (!simulating) return;
 
         // Update all force generators.
-        registry.UpdateForces(Time.fixedDeltaTime);
+        registry.UpdateForces(Time.fixedDeltaTime * timeScale);
 
 		// Integrate particles.
-		Integrate(Time.fixedDeltaTime);
-        resolver.ResolveContacts(Time.fixedDeltaTime);
+		Integrate(Time.fixedDeltaTime * timeScale);
+        resolver.ResolveContacts(Time.fixedDeltaTime * timeScale);
     }
 
 	private void Integrate(float duration)
@@ -75,14 +77,6 @@ public class ParticlePhysicsEngine : MonoBehaviour
 			p.Integrate(duration);
 		}
 	}
-
-    public void SetDamping(float damping)
-    {
-        foreach (Particle p in particles)
-        {
-            p.damping = damping;
-        }
-    }
 
     public void ResetSimulation()
     {

@@ -20,7 +20,6 @@ public class GlobalSettings : MonoBehaviour
     {
         dampingSlider.onValueChanged.AddListener(val =>
         {
-            engine.SetDamping(val);
             dampingValue.text = val.ToString("F2");
 
         });
@@ -29,6 +28,5 @@ public class GlobalSettings : MonoBehaviour
     private void Start()
     {
         dampingValue.text = dampingSlider.value.ToString("F2");
-        engine.SetDamping(1 - dampingSlider.value);
     }
 }
