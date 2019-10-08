@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿/*
+ * Written by André Vennberg, Sebastian Karlsson & Sara Uvalic.
+ */
+
+using UnityEngine;
 
 using System.Linq;
 using System.Collections.Generic;
@@ -7,7 +11,7 @@ using System.Collections.Generic;
 [RequireComponent(typeof(Particle))]
 public class ParticleGravity : ParticleForceGenerator
 {
-    public static float G = 6.67e3f;
+    public static float G = 6.67e-11f * UnitScales.G;
 
     private List<Particle> particles;
 
@@ -32,6 +36,7 @@ public class ParticleGravity : ParticleForceGenerator
             gravForces += gravVec.normalized * (G * (particle.mass * body.mass) / gravVec.sqrMagnitude);
         }
 
-        particle.AddForce(gravForces / 1e28f);
+        // Scale force to fit our unit scales.
+        particle.AddForce(gravForces / UnitScales.Force);
 	}
 }

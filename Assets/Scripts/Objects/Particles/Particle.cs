@@ -11,10 +11,10 @@ using System.Collections.Generic;
 public class Particle : MonoBehaviour, IParticleContactGenerator
 {
     [Header("Physical Properties")]
-    [Tooltip("Mass (10¹⁰ kg).")]
     public float mass;
 
     private Vector3 startPos;
+    private Vector3 startVelocity;
 
 	public float inverseMass { get; protected set; }
     public Vector3 position
@@ -33,8 +33,9 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 
 	protected virtual void Awake()
 	{
-		inverseMass = 1.0f / mass;
+		inverseMass = 1.0f / mass / UnitScales.Mass;
         startPos = transform.position;
+        startVelocity = velocity;
     }
 
     private void Start() => ParticlePhysicsEngine.Register(this);
@@ -62,8 +63,13 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     public void ParticleReset()
     {
         transform.position = startPos;
-        velocity = Vector3.zero;
+        velocity = startVelocity;
         acceleration = Vector3.zero;
         forceAccum = Vector3.zero;
+
+        if (TryGetComponent(out TrailRenderer trail))
+        {
+            trail.Clear();
+        }
     }
 }

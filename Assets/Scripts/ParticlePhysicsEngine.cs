@@ -15,11 +15,19 @@ using System.Collections.Generic;
 [AddComponentMenu("Particle Physics/Particle Physics Engine")]
 public class ParticlePhysicsEngine : MonoBehaviour
 {
+    public enum SimulationState
+    {
+        Playing,
+        Paused,
+        SteppingForward,
+        SteppingBackward
+    }
+
     [Header("Global Settings")]
     public float timeScale = 1.0f;
-    public bool playOnAwake = true;
+    public SimulationState state = SimulationState.Playing;
 
-	private bool simulating;
+    private SimulationState initialState;
 
     private ParticleForceRegistry registry;
     private ParticleContactResolver resolver;
@@ -37,37 +45,50 @@ public class ParticlePhysicsEngine : MonoBehaviour
         ParticleContactResolver.Unregister(p);
     }
 
-	public void StartSimulation() => simulating = true;
+	public void StartSimulation() => state = SimulationState.Playing;
+    public void PauseSimulation() => state = SimulationState.Paused;
+    public void StepForward() => state = SimulationState.SteppingForward;
+    public void StepBackward() => state = SimulationState.SteppingBackward;
 
 	private void Awake()
 	{
         registry = GetComponent<ParticleForceRegistry>();
 		resolver = GetComponent<ParticleContactResolver>();
 
-        simulating = playOnAwake;
+        initialState = state;
 	}
 
-    private void Start()
+    private void OnEnable()
     {
-        /*
-        // Set gravity of all particles.
-        foreach (Particle p in particles)
-        {
-            p.acceleration = gravity;
-        }
-        */
+        TimeScale.timeScaleChanged += TimeScaleChanged;
+    }
+
+    private void OnDisable()
+    {
+        TimeScale.timeScaleChanged -= TimeScaleChanged;
     }
 
     private void FixedUpdate()
 	{
-		if (!simulating) return;
+		if (state == SimulationState.Paused) return;
+
+        float timeStep = Time.fixedDeltaTime * timeScale;
+
+        if (state == SimulationState.SteppingBackward)
+            timeStep *= -1;
 
         // Update all force generators.
-        registry.UpdateForces(Time.fixedDeltaTime * timeScale);
+        registry.UpdateForces(timeStep);
 
 		// Integrate particles.
-		Integrate(Time.fixedDeltaTime * timeScale);
-        resolver.ResolveContacts(Time.fixedDeltaTime * timeScale);
+		Integrate(timeStep);
+        // resolver.ResolveContacts(timeStep);
+
+        if (state == SimulationState.SteppingForward ||
+            state == SimulationState.SteppingBackward)
+        {
+            state = SimulationState.Paused;
+        }
     }
 
 	private void Integrate(float duration)
@@ -78,11 +99,18 @@ public class ParticlePhysicsEngine : MonoBehaviour
 		}
 	}
 
+    private void TimeScaleChanged(int newTimeScale)
+    {
+        timeScale = newTimeScale;
+    }
+
     public void ResetSimulation()
     {
         foreach (Particle p in particles)
         {
             p.ParticleReset();
         }
+
+        state = initialState;
     }
 }
