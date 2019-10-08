@@ -25,6 +25,9 @@ public class RigidBody : MonoBehaviour
 	protected Matrix3x3 inverseInertiaTensor;
 	protected Matrix3x3 inverseInertiaTensorWorld;
 
+    [HideInInspector]
+    public BoundingVolume volume;
+
 	protected bool isAwake = true;
 
 	public bool HasFiniteMass() => inverseMass > 0.0f;
@@ -32,6 +35,7 @@ public class RigidBody : MonoBehaviour
 	protected virtual void Awake()
 	{
 		inverseMass = 1.0f / mass;
+        volume = GetComponent<BoundingVolume>();
 	}
 
 	public void SetInertiaTensor(Matrix3x3 inertiaTensor)
@@ -67,7 +71,7 @@ public class RigidBody : MonoBehaviour
 		AddForceAtPoint(force, pt);
 	}
 
-	public void Integrate(float duration)
+	public bool Integrate(float duration)
 	{
 		// Calculate linear acceleration.
 		Vector3 linearAcc = acceleration;
@@ -83,6 +87,8 @@ public class RigidBody : MonoBehaviour
 		// Add drag.
 		velocity *= Mathf.Pow(linearDamping, duration);
 		angularVelocity *= Mathf.Pow(angularDamping, duration);
+
+        Vector3 prevPos = transform.position;
 
 		// Update position.
 		transform.position += velocity * duration;
@@ -102,6 +108,9 @@ public class RigidBody : MonoBehaviour
 		CalculateDerivedData();
 
 		ClearAccumulators();
+
+        // Return value indicating if object has moved or not.
+        return transform.position != prevPos;
 	}
 
 	protected void ClearAccumulators()
