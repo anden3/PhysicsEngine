@@ -100,7 +100,7 @@ public class BodySettings : MonoBehaviour
         if (selectedBody == null)
             return;
 
-        Vector3 trueVelocity = selectedBody.velocity * UnitScales.Velocity;
+        Vector3 trueVelocity = selectedBody.velocity * (float)UnitScales.Velocity;
 
         // Only update velocity values if they aren't being edited.
         if (!velocityX.isFocused && !velocityY.isFocused && !velocityZ.isFocused)
@@ -137,7 +137,7 @@ public class BodySettings : MonoBehaviour
     }
 
     private void SetMass(string newMass)
-        => selectedBody.mass = float.Parse(newMass) / UnitScales.Mass;
+        => selectedBody.mass = float.Parse(newMass) / (float)UnitScales.Mass;
 
     private void SetVelocity(string _)
     {
@@ -145,7 +145,7 @@ public class BodySettings : MonoBehaviour
             float.Parse(velocityX.text),
             float.Parse(velocityY.text),
             float.Parse(velocityZ.text)
-        ) / UnitScales.Velocity;
+        ) / (float)UnitScales.Velocity;
     }
 
     private void SetOrbitalHeight(string newHeight)
@@ -157,7 +157,7 @@ public class BodySettings : MonoBehaviour
 
         selectedBody.transform.position = Vector3.LerpUnclamped(
             center, selectedBody.transform.position,
-            (float.Parse(newHeight) / UnitScales.Distance) / Vector3.Distance(center, selectedBody.transform.position)
+            (float.Parse(newHeight) / (float)UnitScales.Distance) / Vector3.Distance(center, selectedBody.transform.position)
         );
     }
 

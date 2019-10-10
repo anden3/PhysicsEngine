@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 public class TimeScale : MonoBehaviour
 {
-    public static event System.Action<int> timeScaleChanged;
+    public static int CurrentTimeScale;
 
     private InputField input;
     private Dropdown dropdown;
@@ -51,6 +51,6 @@ public class TimeScale : MonoBehaviour
         string unit = dropdown.options[dropdown.value].text;
 
         dropdownText.text = (amount == 1) ? unit : $"{unit}s";
-        timeScaleChanged?.Invoke(amount * ToSeconds[unit]);
+        CurrentTimeScale = amount * ToSeconds[unit];
     }
 }

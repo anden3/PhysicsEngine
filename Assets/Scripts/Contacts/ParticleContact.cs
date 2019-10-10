@@ -77,12 +77,12 @@ public class ParticleContact
 		Vector3 impulsePerIMass = contactNormal * impulse;
 
 		// Apply impulses
-		first.velocity += impulsePerIMass * first.inverseMass;
+		first.velocity += impulsePerIMass * (float)first.inverseMass;
 
 		if (second)
 		{
 			// Opposite direction.
-			second.velocity += impulsePerIMass * -second.inverseMass;
+			second.velocity += impulsePerIMass * -(float)second.inverseMass;
 		}
 	}
 
@@ -98,16 +98,16 @@ public class ParticleContact
 		// Find the amount of penetration resolution per unit of inverse mass.
 		Vector3 movePerIMass = contactNormal * (penetration / totalInverseMass);
 
-		first.position += movePerIMass * first.inverseMass;
+		first.position += movePerIMass * (float)first.inverseMass;
 
 		if (second)
-            second.position += movePerIMass * -second.inverseMass;
+            second.position += movePerIMass * -(float)second.inverseMass;
 	}
 
 	private float GetTotalIMass()
 	{
-		float totalInverseMass = first.inverseMass;
-		if (second) totalInverseMass += second.inverseMass;
+		float totalInverseMass = (float)first.inverseMass;
+		if (second) totalInverseMass += (float)second.inverseMass;
 
 		return totalInverseMass;
 	}

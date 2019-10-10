@@ -13,10 +13,7 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     [Header("Physical Properties")]
     public float mass;
 
-    private Vector3 startPos;
-    private Vector3 startVelocity;
-
-	public float inverseMass { get; protected set; }
+	public double inverseMass { get; protected set; }
     public Vector3 position
     {
         get => transform.localPosition;
@@ -25,17 +22,27 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 
 	[Header("Starting Conditions")]
     public Vector3 velocity;
+    public float secondsPerDay;
+    public Vector3 rotationAxis = Vector3.up;
+
 	public Vector3 acceleration { get; protected set; }
 
-	protected Vector3 forceAccum;
+    // Initial values used when resetting particle.
+    private Vector3 startPos;
+    private Vector3 startVelocity;
+    private Quaternion startRotation;
+
+    protected Vector3 forceAccum;
 
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
 	protected virtual void Awake()
 	{
 		inverseMass = 1.0f / mass / UnitScales.Mass;
+
         startPos = transform.position;
         startVelocity = velocity;
+        startRotation = transform.rotation;
     }
 
     private void Start() => ParticlePhysicsEngine.Register(this);
@@ -46,12 +53,19 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
 
     public void Integrate(float deltaTime)
 	{
+        if (secondsPerDay > 0)
+        {
+            transform.Rotate(
+                rotationAxis, (-360.0f * deltaTime) / secondsPerDay, Space.Self
+            );
+        }
+
 		if (!HasFiniteMass()) return;
 
 		transform.position += velocity * deltaTime;
 
 		Vector3 resultingAcc = acceleration;
-		resultingAcc += forceAccum * inverseMass;
+		resultingAcc += forceAccum * (float)inverseMass;
 
 		velocity += resultingAcc * deltaTime;
 
@@ -63,6 +77,8 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     public void ParticleReset()
     {
         transform.position = startPos;
+        transform.rotation = startRotation;
+
         velocity = startVelocity;
         acceleration = Vector3.zero;
         forceAccum = Vector3.zero;

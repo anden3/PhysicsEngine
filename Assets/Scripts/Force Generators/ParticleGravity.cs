@@ -11,7 +11,7 @@ using System.Collections.Generic;
 [RequireComponent(typeof(Particle))]
 public class ParticleGravity : ParticleForceGenerator
 {
-    public static float G = 6.67e-11f * UnitScales.G;
+    public static float G = 6.67e-11f * (float)UnitScales.G;
 
     private List<Particle> particles;
 
@@ -37,6 +37,6 @@ public class ParticleGravity : ParticleForceGenerator
         }
 
         // Scale force to fit our unit scales.
-        particle.AddForce(gravForces / UnitScales.Force);
+        particle.AddForce(gravForces / (float)UnitScales.Force);
 	}
 }

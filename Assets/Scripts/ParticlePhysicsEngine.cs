@@ -24,7 +24,6 @@ public class ParticlePhysicsEngine : MonoBehaviour
     }
 
     [Header("Global Settings")]
-    public float timeScale = 1.0f;
     public SimulationState state = SimulationState.Playing;
 
     private SimulationState initialState;
@@ -58,21 +57,11 @@ public class ParticlePhysicsEngine : MonoBehaviour
         initialState = state;
 	}
 
-    private void OnEnable()
-    {
-        TimeScale.timeScaleChanged += TimeScaleChanged;
-    }
-
-    private void OnDisable()
-    {
-        TimeScale.timeScaleChanged -= TimeScaleChanged;
-    }
-
     private void FixedUpdate()
 	{
 		if (state == SimulationState.Paused) return;
 
-        float timeStep = Time.fixedDeltaTime * timeScale;
+        float timeStep = Time.fixedDeltaTime * TimeScale.CurrentTimeScale;
 
         if (state == SimulationState.SteppingBackward)
             timeStep *= -1;
@@ -98,11 +87,6 @@ public class ParticlePhysicsEngine : MonoBehaviour
 			p.Integrate(duration);
 		}
 	}
-
-    private void TimeScaleChanged(int newTimeScale)
-    {
-        timeScale = newTimeScale;
-    }
 
     public void ResetSimulation()
     {
