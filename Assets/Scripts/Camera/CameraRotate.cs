@@ -16,8 +16,8 @@ public class CameraRotate : MonoBehaviour
     private float distance;
     private Vector3 followVelocity = Vector3.zero;
 
-    private void OnEnable() => BodySettings.targetChanged += SwitchTarget;
-    private void OnDisable() => BodySettings.targetChanged -= SwitchTarget;
+    private void OnEnable() => BodySettings.TargetChanged += SwitchTarget;
+    private void OnDisable() => BodySettings.TargetChanged -= SwitchTarget;
 
     private void Start()
     {

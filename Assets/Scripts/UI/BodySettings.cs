@@ -5,9 +5,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+using System;
+
 public class BodySettings : MonoBehaviour
 {
-    public static event System.Action<Transform> targetChanged;
+    public static event Action<Transform> TargetChanged;
 
     // Body picker.
     private Text bodyName;
@@ -19,7 +21,7 @@ public class BodySettings : MonoBehaviour
     private Particle selectedBody;
     private int selectedIndex = 0;
 
-    private Particle orbitCenter;
+    private Transform orbitCenter;
 
     // Body settings.
     private InputField mass;
@@ -37,16 +39,14 @@ public class BodySettings : MonoBehaviour
 
         float largestMass = 0;
 
-        // Select body with largest mass.
+        // Assume that orbit center is the body with the largest mass.
         for (int i = 0; i < bodies.Length; i++)
         {
             if (bodies[i].mass > largestMass)
-            {
                 selectedIndex = i;
-            }
         }
 
-        orbitCenter = bodies[selectedIndex];
+        orbitCenter = bodies[selectedIndex].transform;
 
         bodyName = transform.Find("Body Picker/Name").GetComponent<Text>();
         prevBody = transform.Find("Body Picker/Prev").GetComponent<Button>();
@@ -81,7 +81,7 @@ public class BodySettings : MonoBehaviour
         prevBody.onClick.RemoveAllListeners();
         nextBody.onClick.RemoveAllListeners();
 
-        mass.onEndEdit.RemoveAllListeners();
+        mass.onEndEdit.RemoveListener(SetMass);
 
         velocityX.onEndEdit.RemoveListener(SetVelocity);
         velocityY.onEndEdit.RemoveListener(SetVelocity);
@@ -90,10 +90,7 @@ public class BodySettings : MonoBehaviour
         orbitalHeight.onEndEdit.RemoveListener(SetOrbitalHeight);
     }
 
-    private void Start()
-    {
-        SwitchBody(selectedIndex);
-    }
+    private void Start() => SwitchBody(selectedIndex);
 
     private void Update()
     {
@@ -111,20 +108,25 @@ public class BodySettings : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Switches which body is focused.
+    /// </summary>
+    /// <param name="newIndex">The index of the body to be focused at.</param>
     private void SwitchBody(int newIndex)
     {
         selectedIndex = Mod(newIndex, bodies.Length);
         selectedBody = bodies[selectedIndex];
+        Transform bodyPos = selectedBody.transform;
 
         bodyName.text = selectedBody.name;
         mass.SetTextWithoutNotify((selectedBody.mass * UnitScales.Mass).ToString("0.##E+00"));
 
-        if (selectedBody != orbitCenter)
+        if (bodyPos != orbitCenter)
         {
             orbitalHeightSetting.SetActive(true);
 
             orbitalHeight.SetTextWithoutNotify((
-                Vector3.Distance(selectedBody.transform.position, orbitCenter.transform.position) * UnitScales.Distance
+                Vector3.Distance(bodyPos.position, orbitCenter.position) * UnitScales.Distance
             ).ToString("0.##E+00"));
         }
         else
@@ -133,7 +135,7 @@ public class BodySettings : MonoBehaviour
             orbitalHeightSetting.SetActive(false);
         }        
 
-        targetChanged?.Invoke(selectedBody.transform);
+        TargetChanged?.Invoke(selectedBody.transform);
     }
 
     private void SetMass(string newMass)
@@ -150,14 +152,16 @@ public class BodySettings : MonoBehaviour
 
     private void SetOrbitalHeight(string newHeight)
     {
-        if (selectedBody == orbitCenter)
+        if (selectedBody.transform == orbitCenter)
             return;
 
-        Vector3 center = orbitCenter.transform.position;
+        Vector3 center = orbitCenter.position;
 
         selectedBody.transform.position = Vector3.LerpUnclamped(
             center, selectedBody.transform.position,
-            (float.Parse(newHeight) / (float)UnitScales.Distance) / Vector3.Distance(center, selectedBody.transform.position)
+
+            (float.Parse(newHeight) / (float)UnitScales.Distance)
+                / Vector3.Distance(center, selectedBody.transform.position)
         );
     }
 

@@ -6,26 +6,16 @@
 
 using UnityEngine;
 
-using System.Collections.Generic;
-
-public class Particle : MonoBehaviour, IParticleContactGenerator
+public class Particle : MonoBehaviour
 {
     [Header("Physical Properties")]
     public float mass;
-
 	public double inverseMass { get; protected set; }
-    public Vector3 position
-    {
-        get => transform.localPosition;
-        set => transform.localPosition = value;
-    }
 
 	[Header("Starting Conditions")]
     public Vector3 velocity;
     public float secondsPerDay;
     public Vector3 rotationAxis = Vector3.up;
-
-	public Vector3 acceleration { get; protected set; }
 
     // Initial values used when resetting particle.
     private Vector3 startPos;
@@ -33,8 +23,6 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     private Quaternion startRotation;
 
     protected Vector3 forceAccum;
-
-	public bool HasFiniteMass() => inverseMass > 0.0f;
 
 	protected virtual void Awake()
 	{
@@ -48,31 +36,26 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
     private void Start() => ParticlePhysicsEngine.Register(this);
     private void OnDestroy() => ParticlePhysicsEngine.Unregister(this);
 
-    public void AddForce(in Vector3 force) => forceAccum += force;
-    protected void ClearAccumulator() => forceAccum = Vector3.zero;
+    public void AddForce(in Vector3 force)
+        => forceAccum += force;
 
     public void Integrate(float deltaTime)
 	{
         if (secondsPerDay > 0)
         {
+            // Rotate counter-clockwise.
             transform.Rotate(
                 rotationAxis, (-360.0f * deltaTime) / secondsPerDay, Space.Self
             );
         }
 
-		if (!HasFiniteMass()) return;
-
 		transform.position += velocity * deltaTime;
 
-		Vector3 resultingAcc = acceleration;
-		resultingAcc += forceAccum * (float)inverseMass;
+        Vector3 acceleration = forceAccum * (float)inverseMass;
+		velocity += acceleration * deltaTime;
 
-		velocity += resultingAcc * deltaTime;
-
-        ClearAccumulator();
+        forceAccum = Vector3.zero;
     }
-
-    public virtual void GetContacts(ref List<ParticleContact> contacts) { }
 
     public void ParticleReset()
     {
@@ -80,12 +63,9 @@ public class Particle : MonoBehaviour, IParticleContactGenerator
         transform.rotation = startRotation;
 
         velocity = startVelocity;
-        acceleration = Vector3.zero;
         forceAccum = Vector3.zero;
 
         if (TryGetComponent(out TrailRenderer trail))
-        {
             trail.Clear();
-        }
     }
 }

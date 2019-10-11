@@ -23,9 +23,7 @@ public class ParticleForceRegistry : MonoBehaviour
 
     public void UpdateForces(float deltaTime)
 	{
-		foreach (ParticleForceGenerator gen in generators)
-		{
-            gen.UpdateForce(deltaTime);
-		}
+		foreach (var gen in generators)
+		    gen.UpdateForce(deltaTime);
 	}
 }

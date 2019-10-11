@@ -10,13 +10,13 @@ using System.Collections.Generic;
 
 public class ToggleSiblings : MonoBehaviour
 {
-    public bool siblingsVisible
+    public bool SiblingsVisible
     {
-        get => _siblingsVisible;
-        private set => _siblingsVisible = value;
+        get => siblingsVisible;
+        private set => siblingsVisible = value;
     }
     [SerializeField]
-    private bool _siblingsVisible = true;
+    private bool siblingsVisible = true;
 
     public bool flipImages;
 
@@ -26,19 +26,20 @@ public class ToggleSiblings : MonoBehaviour
     private void Awake()
     {
         images = GetComponentsInChildren<Image>();
+
         Transform parent = transform.parent;
 
         for (int i = transform.GetSiblingIndex() + 1; i < transform.parent.childCount; i++)
-        {
-            siblings.Add(parent.GetChild(i).gameObject, parent.GetChild(i).gameObject.activeSelf);
-        }
+            siblings.Add(
+                parent.GetChild(i).gameObject,
+                parent.GetChild(i).gameObject.activeSelf);
     }
 
     public void Toggle()
     {
         foreach (GameObject sibling in siblings.Keys.ToList())
         {
-            if (siblingsVisible)
+            if (SiblingsVisible)
             {
                 siblings[sibling] = sibling.activeSelf;
                 sibling.SetActive(false);
@@ -52,12 +53,10 @@ public class ToggleSiblings : MonoBehaviour
         if (flipImages)
         {
             foreach (Image image in images)
-            {
                 image.transform.localEulerAngles = new Vector3(
-                    0, 0, siblingsVisible ? 0f : 180f);
-            }
+                    0, 0, SiblingsVisible ? 0f : 180f);
         }
 
-        siblingsVisible = !siblingsVisible;
+        SiblingsVisible = !SiblingsVisible;
     }
 }

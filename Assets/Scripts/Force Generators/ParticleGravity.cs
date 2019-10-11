@@ -25,14 +25,11 @@ public class ParticleGravity : ParticleForceGenerator
 
     public override void UpdateForce(float deltaTime)
 	{
-		if (!particle.HasFiniteMass()) return;
-
         Vector3 gravForces = Vector3.zero;
 
         foreach (Particle body in particles)
         {
-            Vector3 gravVec = body.position - particle.position;
-
+            Vector3 gravVec = body.transform.position - particle.transform.position;
             gravForces += gravVec.normalized * (G * (particle.mass * body.mass) / gravVec.sqrMagnitude);
         }
 
