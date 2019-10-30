@@ -6,6 +6,8 @@ public class RigidBody : MonoBehaviour
 	public float mass;
 	public float inverseMass { get; protected set; }
 
+    public bool affectedByGravity = true;
+
 	[Range(0.0f, 1.0f)]
 	public float linearDamping;
 	[Range(0.0f, 1.0f)]
@@ -14,7 +16,7 @@ public class RigidBody : MonoBehaviour
 	[Header("Starting Conditions")]
 	public Vector3 velocity;
 	public Vector3 angularVelocity;
-	public Vector3 acceleration { get; protected set; }
+    public Vector3 acceleration;
 
 	// Accumulators
 	protected Vector3 forceAccum;
@@ -22,13 +24,23 @@ public class RigidBody : MonoBehaviour
 
 	// Matrices
 	protected Matrix4x4 transformMatrix;
-	protected Matrix3x3 inverseInertiaTensor;
-	protected Matrix3x3 inverseInertiaTensorWorld;
+
+    [HideInInspector]
+    public Matrix3x3 inverseInertiaTensor {
+        get;
+        set;
+    }
+
+    [HideInInspector]
+	public Matrix3x3 inverseInertiaTensorWorld = Matrix3x3.identity;
 
     [HideInInspector]
     public BoundingVolume volume;
 
-	protected bool isAwake = true;
+    [HideInInspector]
+    public bool isStationary = false;
+
+    protected bool isAwake = true;
 
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
@@ -36,9 +48,31 @@ public class RigidBody : MonoBehaviour
 	{
 		inverseMass = 1.0f / mass;
         volume = GetComponent<BoundingVolume>();
-	}
 
-	public void SetInertiaTensor(Matrix3x3 inertiaTensor)
+        switch (volume.type)
+        {
+            case BoundingVolume.Type.Cube:
+                SetInertiaTensor(Matrix3x3.InertiaTensors.Cuboid(mass, ((BoundingCube)volume).bounds.size));
+                break;
+
+            case BoundingVolume.Type.Sphere:
+                SetInertiaTensor(Matrix3x3.InertiaTensors.Sphere(mass, ((BoundingSphere)volume).radius));
+                break;
+        }
+
+        CalculateDerivedData();
+    }
+
+    private void OnEnable()
+    {
+        FindObjectOfType<RigidBodyPhysicsEngine>().Register(this);
+    }
+    private void OnDisable()
+    {
+        FindObjectOfType<RigidBodyPhysicsEngine>()?.Unregister(this);
+    }
+
+    public void SetInertiaTensor(Matrix3x3 inertiaTensor)
 		=> inverseInertiaTensor = inertiaTensor.GetInverse();
 
 	public void AddForce(Vector3 force)
@@ -71,7 +105,13 @@ public class RigidBody : MonoBehaviour
 		AddForceAtPoint(force, pt);
 	}
 
-	public bool Integrate(float duration)
+    public Vector3 GetVelocityAtPoint(Vector3 point)
+        => velocity + Vector3.Cross(angularVelocity, point - transform.position);
+
+    public Vector3 GetVelocityAtBodyPoint(Vector3 point)
+        => velocity + Vector3.Cross(angularVelocity, point);
+
+	public bool Integrate(float deltaTime)
 	{
 		// Calculate linear acceleration.
 		Vector3 linearAcc = acceleration;
@@ -81,17 +121,17 @@ public class RigidBody : MonoBehaviour
 		Vector3 angularAcc = inverseInertiaTensorWorld.Transform(torqueAccum);
 
 		// Update velocities.
-		velocity += linearAcc * duration;
-		angularVelocity = angularAcc * duration;
+		velocity += linearAcc * deltaTime;
+		angularVelocity = angularAcc * deltaTime;
 
 		// Add drag.
-		velocity *= Mathf.Pow(linearDamping, duration);
-		angularVelocity *= Mathf.Pow(angularDamping, duration);
+		velocity *= Mathf.Pow(linearDamping, deltaTime);
+		angularVelocity *= Mathf.Pow(angularDamping, deltaTime);
 
         Vector3 prevPos = transform.position;
 
 		// Update position.
-		transform.position += velocity * duration;
+		transform.position += velocity * deltaTime;
 
 		// Update rotation.
 		transform.rotation = Quaternion.AngleAxis(
@@ -110,7 +150,8 @@ public class RigidBody : MonoBehaviour
 		ClearAccumulators();
 
         // Return value indicating if object has moved or not.
-        return transform.position != prevPos;
+        isStationary = transform.position == prevPos;
+        return !isStationary;
 	}
 
 	protected void ClearAccumulators()
@@ -119,7 +160,7 @@ public class RigidBody : MonoBehaviour
 		torqueAccum = Vector3.zero;
 	}
 
-	protected void CalculateDerivedData()
+	public void CalculateDerivedData()
 	{
 		// TODO: Might not be necessary if Unity does this automagically.
 		transform.rotation.Normalize();

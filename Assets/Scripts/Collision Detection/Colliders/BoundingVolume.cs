@@ -5,16 +5,26 @@ public abstract class BoundingVolume : MonoBehaviour
     public enum Type
     {
         Sphere,
-        Cube,
-        Capsule
+        Cube
     }
 
     public abstract Type type { get; }
     public abstract Vector3 center { get; }
+    public abstract float size { get; }
 
-	public abstract bool Overlaps(BoundingVolume other);
+    public RigidBody body;
+
+    public abstract bool Overlaps(BoundingVolume other, out Contact contact);
+	public abstract bool Overlaps(BoundingCube c, out Contact contact);
+    public abstract bool Overlaps(BoundingSphere s, out Contact contact);
+
     public abstract bool IsPointInside(Vector3 point);
-    public abstract float GetSize();
     public float GetGrowth(BoundingVolume newVolume)
-        => newVolume.GetSize() - GetSize();
+        => newVolume.size - size;
+
+    private void OnValidate()
+    {
+        if (TryGetComponent(out RigidBody body))
+            this.body = body;
+    }
 }
