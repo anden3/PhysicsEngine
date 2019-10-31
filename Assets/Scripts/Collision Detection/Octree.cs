@@ -13,20 +13,33 @@ public class Octree
 {
     private static readonly Vector3 MIN_SIZE = Vector3.one;
 
+    private static readonly Vector3[] OCTANT_CENTERS = new Vector3[8]
+    {
+        new Vector3(-.5f, -.5f, -.5f),
+        new Vector3(-.5f, -.5f, +.5f),
+        new Vector3(-.5f, +.5f, -.5f),
+        new Vector3(-.5f, +.5f, +.5f),
+        new Vector3(+.5f, -.5f, -.5f),
+        new Vector3(+.5f, -.5f, +.5f),
+        new Vector3(+.5f, +.5f, -.5f),
+        new Vector3(+.5f, +.5f, +.5f)
+    };
+
     public static Octree root = null;
 
     public static bool treeBuilt = false;
     public static bool treeReady = false;
 
-    private static List<Octree> nodes = new List<Octree>();
-    private static Queue<RigidBody> pendingInsertion = new Queue<RigidBody>();
+    private static readonly List<Octree> nodes = new List<Octree>();
+    private static readonly Queue<RigidBody> pendingInsertion = new Queue<RigidBody>();
 
     public Bounds region;
     public List<RigidBody> objects;
 
     private Octree parent;
 
-    private Octree[] children = new Octree[8];
+    private readonly Octree[] children = new Octree[8];
+    private readonly Bounds[] octants = new Bounds[8];
     private byte activeNodes = 0;
 
     private int maxLifeSpan = 8;
@@ -40,22 +53,24 @@ public class Octree
 
     private bool IsLeaf() => activeNodes == 0;
 
+    /*
     /// <summary>
     /// Creates an Octree.
     /// </summary>
     /// <param name="parent">The parent of the node.</param>
     public Octree(Octree parent = null) : this(new Bounds(Vector3.zero, Vector3.zero), new List<RigidBody>(), parent) { }
+    */
 
     /// <summary>
-    /// Creates an Octree with a suggestion for the bounding region containing the items.
+    /// Creates an Octree with a suggestion for the bounding <paramref name="region"/> containing the items.
     /// </summary>
     /// <param name="region">The suggested dimensions for the bounding region.</param>
     /// <param name="parent">The parent of the node.</param>
-    /// <remarks>If items are outside this region, the region will be automatically resized.</remarks>
+    /// <remarks>If items are outside the <paramref name="region"/>, the <paramref name="region"/> will be automatically resized.</remarks>
     public Octree(Bounds region, Octree parent = null) : this(region, new List<RigidBody>(), parent) { }
 
     /// <summary>
-    /// Creates an Octree which encloses the given region and contains the provided objects.
+    /// Creates an Octree which encloses the given <paramref name="region"/> and contains the provided <paramref name="objects"/>.
     /// </summary>
     /// <param name="region">The bounding region for the oct tree.</param>
     /// <param name="objects">The list of objects contained within the bounding region.</param>
@@ -77,6 +92,7 @@ public class Octree
             root = this;
             nodes.Add(this);
             FindEnclosingCube(ref region);
+            GetOctants(ref octants);
         }  
     }
 
@@ -118,10 +134,10 @@ public class Octree
             }
         }
 
+        // Prune tree.
+        objects.RemoveAll(o => o == null || !o.gameObject.activeInHierarchy);
         List<RigidBody> movedObjects = objects.Where(rb => rb.Integrate(deltaTime)).ToList();
 
-        // Prune tree.
-        objects.RemoveAll(o => !o.gameObject.activeInHierarchy);
         RemoveInactiveChildren();
 
         foreach ((int index, Octree child) in GetActiveChildren())
@@ -130,21 +146,12 @@ public class Octree
         // Move moved objects into the right node.
         foreach (RigidBody movedObj in movedObjects)
         {
-            if (FindFirstFit(movedObj, out Octree node))
+            if (FindBestFit(movedObj, this, out Octree node))
             {
                 objects.Remove(movedObj);
-                node.Insert(movedObj);
+                node.objects.Add(movedObj);
             }
         }
-
-        // Handled by physics engine.
-        /*
-        if (IsRoot())
-        {
-            // TODO: Check collisions.
-            var contacts = GetContacts(new List<RigidBody>());
-        }
-        */
     }
 
     public static void Enqueue_Static(RigidBody item)
@@ -169,8 +176,8 @@ public class Octree
         {
             // Since the item isn't being added to the root,
             // we will take that as a hint that it should be placed near the current node.
-            if (FindFirstFit(item, out Octree node))
-                node.Insert(item);
+            if (FindBestFit(item, this, out Octree node))
+                node.objects.Add(item);
             else
                 throw new System.ArgumentOutOfRangeException("Item doesn't fit in the octree.");
         }
@@ -225,8 +232,7 @@ public class Octree
             // Can't fit any children.
             return;
 
-        // Create bounding boxes for children, as well as lists of items to be added to them.
-        Bounds[] octants = GetOctantBounds();
+        // Create lists of items to be added to the children.
         List<RigidBody>[] octList = new List<RigidBody>[8];
 
         for (int i = 0; i < 8; i++)
@@ -237,7 +243,7 @@ public class Octree
 
         foreach (RigidBody body in objects)
         {
-            if (TryFitItemInBounds(body, octants, out int index))
+            if (TryFitItemInChildren(body, out int index))
             {
                 hasChildren = true;
                 octList[index].Add(body);
@@ -251,8 +257,7 @@ public class Octree
         {
             if (octList[i].Count > 0)
             {
-                children[i] = CreateNode(octants[i], octList[i]);
-                activeNodes |= (byte)(1 << i);
+                children[i] = AddChild(i, octList[i]);
                 children[i].BuildTree();
             }
         }
@@ -261,65 +266,10 @@ public class Octree
         treeReady = true;
     }
 
-    private Octree CreateNode(Bounds region, List<RigidBody> objects)
+    private void Insert(RigidBody item)
     {
-        if (objects.Count == 0)
-            return null;
-
-        nodes.Add(new Octree(region, objects, parent));
-        return nodes[nodes.Count - 1];
-    }
-
-    private Octree CreateNode(Bounds region, RigidBody body)
-    {
-        nodes.Add(new Octree(region, new List<RigidBody> { body }, parent));
-        return nodes[nodes.Count - 1];
-    }
-
-    private bool Insert(RigidBody item)
-    {
-        /*
-        // If the current node is an empty leaf node, just insert and leave it.
-        if (IsLeaf() && IsEmpty())
-        {
-            objects.Add(item);
-            return true;
-        }
-        */
-
-        if (region.Contains(item.volume) != ContainmentType.Contains)
-        {
-            // Item is too large, so we send it up the tree.
-            if (!IsRoot())
-                return parent.Insert(item);
-            else
-                return false;
-        }
-
-        // If we're at the smallest size, just insert the item here. We can't go any lower!
-        if (region.size.LessThanOrEqual(MIN_SIZE))
-        {
-            objects.Add(item);
-            return true;
-        }
-
-        Bounds[] octants = GetOctantBounds();
-
-        if (TryFitItemInBounds(item, octants, out int index))
-        {
-            if (children[index] != null)
-                return children[index].Insert(item);
-
-            children[index] = CreateNode(octants[index], item);
-            activeNodes |= (byte)(1 << index);
-            return true;
-        }
-        else
-        {
-            // Can't fit in any children, so we add it to ourselves.
-            objects.Add(item);
-            return true;
-        }
+        if (FindBestFit(item, this, out Octree node))
+            node.objects.Add(item);
     }
 
     public List<Contact> GetContacts() => GetContacts(new List<RigidBody>());
@@ -370,9 +320,7 @@ public class Octree
         parentObjects.AddRange(objects.Where(o => !o.isStationary));
 
         foreach ((int index, Octree child) in GetActiveChildren())
-        {
             contacts.AddRange(child.GetContacts(parentObjects));
-        }
 
         return contacts;
     }
@@ -426,59 +374,87 @@ public class Octree
     }
 
     /// <summary>
-    /// Get bounds resulting from splitting the current region into eight cubes.
+    /// Get bounds resulting from splitting the current region into <paramref name="octants"/>.
     /// </summary>
-    /// <returns>Bounds of the octants.</returns>
-    private Bounds[] GetOctantBounds()
+    /// <param name="octants">The array to fill with the bounds of the octants.</param>
+    private void GetOctants(ref Bounds[] octants)
     {
-        Vector3 min = region.min;
-        Vector3 max = region.max;
-        Vector3 center = region.center;
+        for (int i = 0; i < 8; i++)
+            octants[i] = GetNewOctant(i, region);
+    }
 
-        return new Bounds[8]
+    private Bounds GetNewOctant(int index, Bounds parent)
+        => new Bounds(parent.center + Vector3.Scale(OCTANT_CENTERS[index], parent.extents), parent.extents);
+
+    private bool TryGetChild(int index, out Octree child)
+    {
+        if ((activeNodes & (1 << index)) > 0)
         {
-            children[0]?.region ?? CreateBounds(min, center),
-            children[1]?.region ?? CreateBounds(new Vector3(center.x, min.y, min.z), new Vector3(max.x, center.y, center.z)),
-            children[2]?.region ?? CreateBounds(new Vector3(center.x, min.y, center.z), new Vector3(max.x, center.y, max.z)),
-            children[3]?.region ?? CreateBounds(new Vector3(min.x, min.y, center.z), new Vector3(center.x, center.y, max.z)),
-            children[4]?.region ?? CreateBounds(new Vector3(min.x, center.y, min.z), new Vector3(center.x, max.y, center.z)),
-            children[5]?.region ?? CreateBounds(new Vector3(center.x, center.y, min.z), new Vector3(max.x, max.y, center.z)),
-            children[6]?.region ?? CreateBounds(center, max),
-            children[7]?.region ?? CreateBounds(new Vector3(min.x, center.y, center.z), new Vector3(center.x, max.y, max.z))
-        };
+            child = children[index];
+            Debug.Assert(child != null);
+            return true;
+        }
+
+        child = null;
+        return false;
+    }
+
+    private Octree AddChild(int index) => AddChild(index, new List<RigidBody>());
+    private Octree AddChild(int index, List<RigidBody> items)
+    {
+        activeNodes |= (byte)(1 << index);
+        nodes.Add(new Octree(octants[index], items, this));
+        return nodes.Back();
     }
 
     /// <summary>
-    /// Goes up the tree and stops at the first <paramref name="node"/> which fits the <paramref name="item"/>.
+    /// Goes through the tree and stops at the first <paramref name="node"/> which fits the <paramref name="item"/>.
     /// </summary>
     /// <param name="item">The item to fit.</param>
+    /// <param name="start">The node to start from.</param>
     /// <param name="node">The node that fits the item, is null if none are found.</param>
     /// <returns>True if node found, else false.</returns>
-    private bool FindFirstFit(RigidBody item, out Octree node)
+    private static bool FindBestFit(RigidBody item, Octree start, out Octree node)
     {
-        Octree current = this;
+        node = start;
 
-        while (current.region.Contains(item.volume) != ContainmentType.Contains)
+        while (true)
         {
-            if (!current.IsRoot())
-                current = current.parent;
-            else
+            if (node.region.Contains(item.volume) != ContainmentType.Contains)
             {
-                /*
-                // Root region cannot contain object.
-                // Need to rebuild entire tree...
-                List<RigidBody> objects = nodes.SelectMany(o => o.objects).ToList();
-                UnloadTree();
-                pendingInsertion.Enqueue(objects);
-                */
+                // Keep going upwards until item fits, or we hit the root node.
+                if (node.IsRoot())
+                {
+                    // Root region cannot contain object.
+                    // Need to rebuild entire tree...
+                    node = null;
+                    return false;
+                }
 
-                node = null;
-                return false;
+                node = node.parent;
+                continue;
             }
-        }
 
-        node = current;
-        return true;
+            if ((node.IsLeaf() && node.objects.Count < 2) || node.region.size.LessThanOrEqual(MIN_SIZE))
+            {
+                return true;
+            }
+
+            if (node.TryFitItemInChildren(item, out int index))
+            {
+                if (node.TryGetChild(index, out Octree child))
+                {
+                    node = child;
+                    continue;
+                }
+
+                node = node.AddChild(index);
+                return true;
+            }
+
+            // Can't fit in any children.
+            return true;
+        }
     }
 
     /// <summary>
@@ -488,7 +464,7 @@ public class Octree
     /// <param name="octants">An array of bounds representing the octants.</param>
     /// <param name="index">The index of the octant if one is found, else -1.</param>
     /// <returns>True if an octant that fits the item is found.</returns>
-    private bool TryFitItemInBounds(RigidBody item, Bounds[] octants, out int index)
+    private bool TryFitItemInChildren(RigidBody item, out int index)
     {
         for (index = 0; index < octants.Length; index++)
             if (octants[index].Contains(item.volume) == ContainmentType.Contains)
@@ -504,12 +480,12 @@ public class Octree
     /// <returns>Enumerator to index and instance of child.</returns>
     private IEnumerable<(byte index, Octree child)> GetActiveChildren()
     {
-        if (children == null || activeNodes == 0)
+        if (activeNodes == 0)
             yield break;
 
         byte b = activeNodes;
 
-        for (byte i = 1; b > 0; b >>= 1, i++)
+        for (byte i = 0; i < 8; b >>= 1, i++)
             if ((b & 1) == 1 && children[i] != null)
                 yield return (i, children[i]);
     }
@@ -536,13 +512,5 @@ public class Octree
             newSize = Mathf.NextPowerOfTwo(newSize);
 
         region.size = new Vector3(newSize, newSize, newSize);
-    }
-
-    private static Bounds CreateBounds(Vector3 min, Vector3 max)
-    {
-        Vector3 size = max - min;
-        Vector3 center = min + size / 2;
-
-        return new Bounds(center, size);
     }
 }

@@ -30,7 +30,10 @@ namespace AndreExtensions
 
                 case BoundingVolume.Type.Sphere:
                     BoundingSphere sphere = (BoundingSphere)volume;
-                    Bounds aabb = new Bounds(sphere.center, new Vector3(sphere.radius * 2, sphere.radius * 2, sphere.radius * 2));
+
+                    // Treat spheres as AABBs.
+                    float radiusSqr = sphere.radius * sphere.radius;
+                    Bounds aabb = new Bounds(sphere.center, new Vector3(radiusSqr, radiusSqr, radiusSqr));
 
                     if (bounds.min.LessThanOrEqual(aabb.min) && bounds.max.GreaterThanOrEqual(aabb.max))
                         return ContainmentType.Contains;
@@ -39,17 +42,6 @@ namespace AndreExtensions
                         return ContainmentType.Intersects;
 
                     return ContainmentType.Disjoint;
-                    /*
-                    float closest = bounds.SqrDistance(sphere.center);
-
-                    if (closest < sphere.radius.Squared())
-                        return ContainmentType.Intersects;
-
-                    else if (bounds.Contains(sphere.center))
-                        return ContainmentType.Contains;
-
-                    return ContainmentType.Disjoint;
-                    */
             }
 
             return ContainmentType.Disjoint;
@@ -96,6 +88,17 @@ namespace AndreExtensions
         {
             foreach (T item in list)
                 queue.Enqueue(item);
+        }
+    }
+
+    public static class ListExtensions
+    {
+        public static T Back<T>(this List<T> list)
+        {
+            if (list.Count > 0)
+                return list[list.Count - 1];
+
+            throw new System.IndexOutOfRangeException("Cannot get the last element of an empty list.");
         }
     }
 }
