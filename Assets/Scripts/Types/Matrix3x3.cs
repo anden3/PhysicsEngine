@@ -2,6 +2,7 @@
 
 using System;
 
+// [System.Diagnostics.DebuggerStepThrough]
 public class Matrix3x3
 {
     public static class InertiaTensors
@@ -22,11 +23,11 @@ public class Matrix3x3
         }
     }
 
-    public static Matrix3x3 Zero => new Matrix3x3(zero);
-    public static Matrix3x3 Identity => new Matrix3x3(identity);
+    public static readonly Matrix3x3 Zero => new Matrix3x3(zero);
+    public static readonly Matrix3x3 Identity => new Matrix3x3(identity);
 
-    private static float[] zero     = new float[9] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    private static float[] identity = new float[9] { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+    private static readonly float[] zero = new float[9] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    private static readonly float[] identity = new float[9] { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 
     public float[] data = new float[9];
 
@@ -34,6 +35,7 @@ public class Matrix3x3
     {
         Array.Copy(identity, data, 9);
     }
+
     public Matrix3x3(params float[] list)
     {
         Array.Copy(list, data, 9);
@@ -96,9 +98,12 @@ public class Matrix3x3
 			m1[6]*m2[1] + m1[7]*m2[4] + m1[8]*m2[7],
 			m1[6]*m2[2] + m1[7]*m2[5] + m1[8]*m2[8]
 		);
-	}
+    }
 
-	public static Matrix3x3 Invert(Matrix3x3 m)
+    public static bool operator ==(Matrix3x3 left, Matrix3x3 right) => left.Equals(right);
+    public static bool operator !=(Matrix3x3 left, Matrix3x3 right) => !(left == right);
+
+    public static Matrix3x3 Invert(Matrix3x3 m)
 	{
 		float t1 = m[0] * m[4];
 		float t2 = m[0] * m[5];
@@ -172,4 +177,7 @@ public class Matrix3x3
         data[6] = -v.y;
         data[7] = v.x;
     }
+
+    public override bool Equals(object obj) => (obj is Matrix3x3) ? data.Equals(((Matrix3x3)obj).data) : false;
+    public override int GetHashCode() => data.GetHashCode();
 }

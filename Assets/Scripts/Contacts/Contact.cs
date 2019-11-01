@@ -278,4 +278,6 @@ public class Contact
             rotationChange[1].magnitude, rotationChange[1]
         ) * bodies[1].transform.rotation;
     }
+
+    public override string ToString() => $"{bodies[0]} <-> {bodies[1]}";
 }
