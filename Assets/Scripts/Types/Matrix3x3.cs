@@ -1,31 +1,47 @@
 ﻿using UnityEngine;
 
+using System;
+
 public class Matrix3x3
 {
     public static class InertiaTensors
     {
-        private static float Sqr(float n) => n * n;
-
         public static Matrix3x3 Cuboid(float mass, Vector3 size)
         {
             return new Matrix3x3(
-                Sqr(size.y) + Sqr(size.z), 0, 0,
-                0, Sqr(size.x) + Sqr(size.z), 0,
-                0, 0, Sqr(size.x) + Sqr(size.y)
+                (size.y * size.y) + (size.z * size.z), 0, 0,
+                0, (size.x * size.x) + (size.z * size.z), 0,
+                0, 0, (size.x * size.x) + (size.y * size.y)
             ) * (mass / 12);
         }
 
         public static Matrix3x3 Sphere(float mass, float radius, bool isHollow = false)
         {
-            return identity * (isHollow ? (2.0f / 3) : (2.0f / 5)) * mass * Sqr(radius);
+            Matrix3x3 tensor = Identity * (2.0f / (isHollow ? 3 : 5) * mass * (radius * radius));
+            return tensor;
         }
     }
 
-	public float[] data = new float[9];
+    public static Matrix3x3 Zero => new Matrix3x3(zero);
+    public static Matrix3x3 Identity => new Matrix3x3(identity);
 
-    public Matrix3x3() => data = identity.data;
-	public Matrix3x3(params float[] list) => data = list;
-	public Matrix3x3(Matrix3x3 m) => data = m.data;
+    private static float[] zero     = new float[9] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    private static float[] identity = new float[9] { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+
+    public float[] data = new float[9];
+
+    public Matrix3x3()
+    {
+        Array.Copy(identity, data, 9);
+    }
+    public Matrix3x3(params float[] list)
+    {
+        Array.Copy(list, data, 9);
+    }
+    public Matrix3x3(Matrix3x3 m)
+    {
+        Array.Copy(m.data, data, 9);
+    }
 
     public Matrix3x3(Vector3 x, Vector3 y, Vector3 z)
     {
@@ -37,17 +53,14 @@ public class Matrix3x3
         };
     }
 
-    public static Matrix3x3 zero = new Matrix3x3(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    public static Matrix3x3 identity = new Matrix3x3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
     public static Matrix3x3 operator+(Matrix3x3 m1, Matrix3x3 m2)
     {
-        Matrix3x3 newMatrix = zero;
+        Matrix3x3 result = new Matrix3x3(m1);
 
         for (int i = 0; i < 9; i++)
-            newMatrix[i] = m1[i] + m2[i];
+            result.data[i] += m2[i];
 
-        return newMatrix;
+        return result;
     }
     
 	public static Matrix3x3 operator*(Matrix3x3 m, float s)
@@ -55,7 +68,7 @@ public class Matrix3x3
 		Matrix3x3 result = new Matrix3x3(m);
 
 		for (int i = 0; i < 9; i++)
-			m.data[i] *= s;
+			result.data[i] *= s;
 
 		return result;
 	}

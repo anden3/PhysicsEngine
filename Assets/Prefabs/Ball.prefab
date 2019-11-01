@@ -96,8 +96,8 @@ MonoBehaviour:
   affectedByGravity: 1
   linearDamping: 0.5
   angularDamping: 0.5
-  velocity: {x: 1, y: 2, z: 0}
-  angularVelocity: {x: 5, y: 0, z: 0}
+  velocity: {x: 0, y: 0, z: 0}
+  angularVelocity: {x: 0, y: 0, z: 0}
   acceleration: {x: 0, y: 0, z: 0}
   volume: {fileID: 0}
   isStationary: 0

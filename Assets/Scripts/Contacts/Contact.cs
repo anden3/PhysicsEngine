@@ -108,11 +108,11 @@ public class Contact
     private Vector3 CalculateFrictionImpulse(Matrix3x3[] inverseInertiaTensor)
     {
         float inverseMass = 0.0f;
-        Matrix3x3 deltaVelocityWorld = Matrix3x3.identity;
+        Matrix3x3 deltaVelocityWorld = Matrix3x3.Identity;
 
         for (int i = 0; i < 2; i++)
         {
-            Matrix3x3 impulseToTorque = Matrix3x3.identity;
+            Matrix3x3 impulseToTorque = Matrix3x3.Identity;
             impulseToTorque.SetSkewSymmetric(relativePositions[i]);
 
             Matrix3x3 bodyDeltaVelocityWorld = impulseToTorque;

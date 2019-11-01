@@ -21,6 +21,11 @@ public class ContactResolver : MonoBehaviour
     {
         foreach (Contact contact in contacts)
         {
+            if (contact.bodies[0].volume.type == contact.bodies[1].volume.type)
+            {
+                ;
+            }
+
             contact.CalculateInternals(deltaTime);
         }
     }
@@ -80,7 +85,7 @@ public class ContactResolver : MonoBehaviour
 
         while (iterationsUsed < maxVelocityIterations)
         {
-            // Find biggest penetration.
+            // Find largest closing velocity.
             float max = float.Epsilon;
             Contact match = null;
 

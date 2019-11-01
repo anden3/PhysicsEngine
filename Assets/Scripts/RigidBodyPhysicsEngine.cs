@@ -19,16 +19,15 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
     public Bounds playArea;
 
     private Octree octree;
-    private List<RigidBody> bodies = new List<RigidBody>();
+    private readonly List<RigidBody> bodies = new List<RigidBody>();
 
     private ContactResolver resolver;
+    private readonly List<Contact> contacts = new List<Contact>();
 
     public void Register(RigidBody b)
     {
         if (b.affectedByGravity)
-        {
             b.acceleration = gravity;
-        }
 
         bodies.Add(b);
 
@@ -58,17 +57,22 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
 	{
         if (state != SimState.Running)
             return;
-
+        
+        /*
 		foreach (RigidBody body in bodies)
 		{
-			// registry.UpdateForces(Time.fixedDeltaTime);
+			registry.UpdateForces(Time.fixedDeltaTime);
 		}
+        */
 
         octree.Update(Time.fixedDeltaTime);
-        resolver.ResolveContacts(octree.GetContacts(), Time.fixedDeltaTime);
+        octree.GetContacts(contacts);
+
+        resolver.ResolveContacts(contacts, Time.fixedDeltaTime);
+        contacts.Clear();
 	}
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
         if (Application.isPlaying)
             Octree.Debug_Draw();

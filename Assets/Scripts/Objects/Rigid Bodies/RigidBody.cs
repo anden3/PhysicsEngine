@@ -26,13 +26,10 @@ public class RigidBody : MonoBehaviour
 	protected Matrix4x4 transformMatrix;
 
     [HideInInspector]
-    public Matrix3x3 inverseInertiaTensor {
-        get;
-        set;
-    }
+    public Matrix3x3 inverseInertiaTensor;
 
     [HideInInspector]
-	public Matrix3x3 inverseInertiaTensorWorld = Matrix3x3.identity;
+	public Matrix3x3 inverseInertiaTensorWorld = Matrix3x3.Identity;
 
     [HideInInspector]
     public BoundingVolume volume;
@@ -52,7 +49,7 @@ public class RigidBody : MonoBehaviour
         switch (volume.type)
         {
             case BoundingVolume.Type.Cube:
-                SetInertiaTensor(Matrix3x3.InertiaTensors.Cuboid(mass, ((BoundingCube)volume).bounds.size));
+                SetInertiaTensor(Matrix3x3.InertiaTensors.Cuboid(mass, ((BoundingCube)volume).bounds.extents));
                 break;
 
             case BoundingVolume.Type.Sphere:
@@ -113,14 +110,9 @@ public class RigidBody : MonoBehaviour
 
 	public bool Integrate(float deltaTime)
 	{
-		// Calculate linear acceleration.
-		Vector3 linearAcc = acceleration;
-		linearAcc += forceAccum * inverseMass;
-
-		// Calculate angular acceleration.
+		Vector3 linearAcc = acceleration + forceAccum * inverseMass;
 		Vector3 angularAcc = inverseInertiaTensorWorld.Transform(torqueAccum);
 
-		// Update velocities.
 		velocity += linearAcc * deltaTime;
 		angularVelocity = angularAcc * deltaTime;
 
@@ -130,10 +122,8 @@ public class RigidBody : MonoBehaviour
 
         Vector3 prevPos = transform.position;
 
-		// Update position.
 		transform.position += velocity * deltaTime;
 
-		// Update rotation.
 		transform.rotation = Quaternion.AngleAxis(
 			angularVelocity.magnitude * Time.deltaTime, angularVelocity
 		) * transform.rotation;
@@ -144,12 +134,9 @@ public class RigidBody : MonoBehaviour
 		angularVelocity *= Mathf.Pow(angularDamping, duration);
 		*/
 
-		// Update matrices.
 		CalculateDerivedData();
-
 		ClearAccumulators();
 
-        // Return value indicating if object has moved or not.
         isStationary = transform.position == prevPos;
         return !isStationary;
 	}

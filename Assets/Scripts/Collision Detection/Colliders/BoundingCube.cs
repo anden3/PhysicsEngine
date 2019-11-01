@@ -154,9 +154,9 @@ public class BoundingCube : BoundingVolume
 
                 switch (i)
                 {
-                    case 0: normal = Mathf.Sign(point.x) * Vector3.right; break;
-                    case 1: normal = Mathf.Sign(point.y) * Vector3.up; break;
-                    case 2: normal = Mathf.Sign(point.z) * Vector3.forward; break;
+                    case 0: normal = -Mathf.Sign(point.x) * Vector3.right; break;
+                    case 1: normal = -Mathf.Sign(point.y) * Vector3.up; break;
+                    case 2: normal = -Mathf.Sign(point.z) * Vector3.forward; break;
                 }
             }
         }
