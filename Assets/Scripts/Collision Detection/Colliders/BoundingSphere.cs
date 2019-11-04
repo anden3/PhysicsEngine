@@ -77,7 +77,7 @@ public class BoundingSphere : BoundingVolume
         Vector3 position = center + midLine * 0.5f;
 
         contact = new Contact(
-            body, s.body, position, normal, depth
+            body, s.body, position, -normal, depth
         );
 
         return true;

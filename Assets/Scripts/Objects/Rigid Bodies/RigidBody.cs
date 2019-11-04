@@ -43,7 +43,11 @@ public class RigidBody : MonoBehaviour
 
 	protected virtual void Awake()
 	{
-		inverseMass = 1.0f / mass;
+        if (mass < 0)
+            inverseMass = 0;
+        else
+            inverseMass = 1.0f / mass;
+
         volume = GetComponent<BoundingVolume>();
 
         switch (volume.type)

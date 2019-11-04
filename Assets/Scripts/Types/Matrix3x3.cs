@@ -2,7 +2,7 @@
 
 using System;
 
-// [System.Diagnostics.DebuggerStepThrough]
+[System.Diagnostics.DebuggerStepThrough]
 public class Matrix3x3
 {
     public static class InertiaTensors
@@ -23,8 +23,8 @@ public class Matrix3x3
         }
     }
 
-    public static readonly Matrix3x3 Zero => new Matrix3x3(zero);
-    public static readonly Matrix3x3 Identity => new Matrix3x3(identity);
+    public static Matrix3x3 Zero => new Matrix3x3(zero);
+    public static Matrix3x3 Identity => new Matrix3x3(identity);
 
     private static readonly float[] zero = new float[9] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     private static readonly float[] identity = new float[9] { 1, 0, 0, 0, 1, 0, 0, 0, 1 };

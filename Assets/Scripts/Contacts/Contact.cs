@@ -10,7 +10,7 @@ public class Contact
     public readonly Vector3 normal;
     public float penetration;
 
-    public float friction = 0.0f;
+    public float friction = 0.5f;
     public float restitution = 0.5f;
 
     public float angularLimit = 0.2f;
@@ -198,6 +198,9 @@ public class Contact
 
             totalInertia += linearInertia[i] + angularInertia[i];
         }
+
+        if (totalInertia == 0)
+            return;
 
         for (int i = 0; i < 2; i++)
         {

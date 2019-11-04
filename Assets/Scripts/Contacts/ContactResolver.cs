@@ -21,11 +21,6 @@ public class ContactResolver : MonoBehaviour
     {
         foreach (Contact contact in contacts)
         {
-            if (contact.bodies[0].volume.type == contact.bodies[1].volume.type)
-            {
-                ;
-            }
-
             contact.CalculateInternals(deltaTime);
         }
     }
