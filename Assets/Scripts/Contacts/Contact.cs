@@ -1,4 +1,10 @@
-﻿using UnityEngine;
+﻿/*
+ * Based on code by Ian Millington in Game Physics Engine Development.
+ */
+
+using UnityEngine;
+
+using System.Collections.Generic;
 
 using AndreExtensions;
 
@@ -6,15 +12,15 @@ public class Contact
 {
     public readonly RigidBody[] bodies = new RigidBody[2];
 
+    public static float friction = 0.5f;
+    public static float restitution = 0.2f;
+
+    public static float angularLimit = 0.2f;
+    public static float velocityLimit = 0.25f;
+
     public readonly Vector3 position;
     public readonly Vector3 normal;
     public float penetration;
-
-    public float friction = 0.5f;
-    public float restitution = 0.5f;
-
-    public float angularLimit = 0.2f;
-    public float velocityLimit = 0.25f;
 
     public Vector3[] relativePositions = new Vector3[2];
 
@@ -32,6 +38,63 @@ public class Contact
         this.position = position;
         this.normal = normal;
         this.penetration = penetration;
+    }
+
+    public void MatchAwakeState()
+    {
+        if (bodies[1] == null)
+            return;
+
+        if (bodies[0].isAwake != bodies[1].isAwake)
+        {
+            if (!bodies[0].isAwake) bodies[0].SetAwake(true);
+            else                    bodies[1].SetAwake(true);
+        }
+    }
+
+    public void CalculateInternals(float deltaTime)
+    {
+        CalculateContactBasis();
+
+        relativePositions[0] = position - bodies[0].transform.position;
+        contactVelocity = CalculateLocalVelocity(0, deltaTime);
+
+        if (bodies[1])
+        {
+            relativePositions[1] = position - bodies[1].transform.position;
+            contactVelocity -= CalculateLocalVelocity(1, deltaTime);
+        }   
+
+        CalculateDesiredDeltaVelocity(deltaTime);
+    }
+
+    private Vector3 CalculateLocalVelocity(int index, float deltaTime)
+    {
+        RigidBody body = bodies[index];
+        Vector3 velocity = body.GetVelocityAtBodyPoint(relativePositions[index]);
+
+        Vector3 contactVelocity = worldToContact.Transform(velocity);
+
+        Vector3 accVelocity = worldToContact.Transform(body.acceleration * deltaTime);
+        accVelocity.x = 0;
+
+        return contactVelocity + accVelocity;
+    }
+
+    public void CalculateDesiredDeltaVelocity(float deltaTime)
+    {
+        float velocityFromAcc = Vector3.Dot(bodies[0].lastFrameAcceleration * deltaTime, normal);
+
+        if (bodies[1])
+            velocityFromAcc -= Vector3.Dot(bodies[1].lastFrameAcceleration * deltaTime, normal);
+
+        float thisRestitution = restitution;
+
+        // Stop bouncing due to restitution at low speeds.
+        if (Mathf.Abs(contactVelocity.x) < velocityLimit)
+            thisRestitution = 0.0f;
+
+        desiredDeltaVelocity = -contactVelocity.x - thisRestitution * (contactVelocity.x - velocityFromAcc);
     }
 
     private void CalculateContactBasis()
@@ -52,9 +115,9 @@ public class Contact
 
             tangent[0] = new Vector3(0, -normal.z, normal.y) * normalizingScale;
             tangent[1] = new Vector3(
-                normal.y * tangent[0].z - normal.z * tangent[0].y,
+                 normal.y * tangent[0].z - normal.z * tangent[0].y,
                 -normal.x * tangent[0].z,
-                normal.x * tangent[0].y
+                 normal.x * tangent[0].y
             );
         }
 
@@ -62,61 +125,34 @@ public class Contact
         worldToContact = contactToWorld.GetTranspose();
     }
 
-    public void CalculateInternals(float deltaTime)
+    private Vector3 CalculateFrictionlessImpulse()
     {
-        CalculateContactBasis();
+        float deltaVelocity = 0.0f;
 
-        relativePositions[0] = position - bodies[0].transform.position;
-        relativePositions[1] = position - bodies[1].transform.position;
-
-        contactVelocity =
-              CalculateLocalVelocity(0, deltaTime)
-            - CalculateLocalVelocity(1, deltaTime);
-
-        CalculateDesiredDeltaVelocity(deltaTime);
-    }
-
-    private Vector3 CalculateLocalVelocity(int index, float deltaTime)
-    {
-        RigidBody body = bodies[index];
-        Vector3 velocity = body.GetVelocityAtBodyPoint(relativePositions[index]);
-
-        Vector3 contactVelocity = worldToContact.Transform(velocity);
-
-        Vector3 accVelocity = worldToContact.Transform(body.acceleration * deltaTime);
-        accVelocity.x = 0;
-
-        return contactVelocity + accVelocity;
-    }
-
-    public void CalculateDesiredDeltaVelocity(float deltaTime)
-    {
-        float velocityFromAcc =
-              Vector3.Dot(bodies[0].acceleration * deltaTime, normal)
-            - Vector3.Dot(bodies[1].acceleration * deltaTime, normal);
-
-        float thisRestitution = restitution;
-
-        if (Mathf.Abs(contactVelocity.x) < velocityLimit)
+        foreach ((int i, RigidBody body) in GetActiveBodies())
         {
-            thisRestitution = 0.0f;
+            Vector3 deltaVelocityWorld = Vector3.Cross(relativePositions[i], normal);
+            deltaVelocityWorld = body.inverseInertiaTensor.Transform(deltaVelocityWorld);
+            deltaVelocityWorld = Vector3.Cross(deltaVelocityWorld, relativePositions[i]);
+
+            deltaVelocity += body.inverseMass + Vector3.Dot(deltaVelocityWorld, normal);
         }
 
-        desiredDeltaVelocity = -contactVelocity.x - thisRestitution * (contactVelocity.x - velocityFromAcc);
+        return new Vector3(desiredDeltaVelocity / deltaVelocity, 0, 0);
     }
 
-    private Vector3 CalculateFrictionImpulse(Matrix3x3[] inverseInertiaTensor)
+    private Vector3 CalculateFrictionImpulse()
     {
         float inverseMass = 0.0f;
         Matrix3x3 deltaVelocityWorld = Matrix3x3.Identity;
 
-        for (int i = 0; i < 2; i++)
+        foreach ((int i, RigidBody body) in GetActiveBodies())
         {
             Matrix3x3 impulseToTorque = Matrix3x3.Identity;
             impulseToTorque.SetSkewSymmetric(relativePositions[i]);
 
             Matrix3x3 bodyDeltaVelocityWorld = impulseToTorque;
-            bodyDeltaVelocityWorld *= inverseInertiaTensor[i];
+            bodyDeltaVelocityWorld *= body.inverseInertiaTensor;
             bodyDeltaVelocityWorld *= impulseToTorque;
             bodyDeltaVelocityWorld *= -1;
 
@@ -156,22 +192,6 @@ public class Contact
         return impulseContact;
     }
 
-    private Vector3 CalculateFrictionlessImpulse(Matrix3x3[] inverseInertiaTensor)
-    {
-        float deltaVelocity = 0.0f;
-
-        for (int i = 0; i < 2; i++)
-        {
-            Vector3 deltaVelocityWorld = Vector3.Cross(relativePositions[i], normal);
-            deltaVelocityWorld = inverseInertiaTensor[0].Transform(deltaVelocityWorld);
-            deltaVelocityWorld = Vector3.Cross(deltaVelocityWorld, relativePositions[i]);
-
-            deltaVelocity += bodies[i].inverseMass + Vector3.Dot(deltaVelocityWorld, normal);
-        }
-
-        return new Vector3(desiredDeltaVelocity / deltaVelocity, 0, 0);
-    }
-
     public void ApplyPositionChange(float penetration, out Vector3[] linearChange, out Vector3[] angularChange)
     {
         float totalInertia = 0.0f;
@@ -185,10 +205,8 @@ public class Contact
         linearChange = new Vector3[2];
         angularChange = new Vector3[2];
 
-        for (int i = 0; i < 2; i++)
+        foreach ((int i, RigidBody body) in GetActiveBodies())
         {
-            RigidBody body = bodies[i];
-
             Vector3 angularInertiaWorld = Vector3.Cross(relativePositions[i], normal);
             angularInertiaWorld = body.inverseInertiaTensor.Transform(angularInertiaWorld);
             angularInertiaWorld = Vector3.Cross(angularInertiaWorld, relativePositions[i]);
@@ -202,7 +220,7 @@ public class Contact
         if (totalInertia == 0)
             return;
 
-        for (int i = 0; i < 2; i++)
+        foreach ((int i, RigidBody body) in GetActiveBodies())
         {
             float sign = (i == 0) ? 1 : -1;
 
@@ -228,59 +246,54 @@ public class Contact
                 Vector3 targetAngularDirection = Vector3.Cross(relativePositions[i], normal);
 
                 angularChange[i] =
-                    bodies[i].inverseInertiaTensor.Transform(targetAngularDirection)
+                    body.inverseInertiaTensor.Transform(targetAngularDirection)
                     * (angularMove[i] / angularInertia[i]);
             }
 
             linearChange[i] = normal * linearMove[i];
 
-            bodies[i].transform.position += normal * linearMove[i];
+            body.transform.position += normal * linearMove[i];
 
-            bodies[i].transform.rotation = Quaternion.AngleAxis(
+            body.transform.rotation = Quaternion.AngleAxis(
                 angularChange[i].magnitude, angularChange[i]
-            ) * bodies[i].transform.rotation;
+            ) * body.transform.rotation;
 
-            bodies[i].CalculateDerivedData();
+            body.CalculateDerivedData();
         }
     }
 
     public void ApplyVelocityChange(out Vector3[] velocityChange, out Vector3[] rotationChange)
     {
-        Matrix3x3[] inverseInertiaTensors = new Matrix3x3[]
-        {
-            bodies[0].inverseInertiaTensorWorld,
-            bodies[1].inverseInertiaTensorWorld
-        };
-
         Vector3 impulseContact = (friction == 0.0f)
-            ? CalculateFrictionlessImpulse(inverseInertiaTensors)
-            : CalculateFrictionImpulse(inverseInertiaTensors);
+            ? CalculateFrictionlessImpulse()
+            : CalculateFrictionImpulse();
 
         Vector3 impulse = contactToWorld.Transform(impulseContact);
 
-        rotationChange = new Vector3[2]
+        velocityChange = new Vector3[2];
+        rotationChange = new Vector3[2];
+
+        foreach ((int i, RigidBody body) in GetActiveBodies())
         {
-            inverseInertiaTensors[0].Transform(Vector3.Cross(relativePositions[0], impulse)),
-            inverseInertiaTensors[1].Transform(Vector3.Cross(relativePositions[1], impulse))
-        };
+            rotationChange[i] = body.inverseInertiaTensor.Transform(Vector3.Cross(relativePositions[i], impulse));
+            velocityChange[i] = impulse * body.inverseMass * (i == 0 ? 1 : -1);
 
-        velocityChange = new Vector3[2]
-        {
-            impulse * bodies[0].inverseMass,
-            impulse * -bodies[1].inverseMass
-        };
+            body.velocity += velocityChange[i];
 
-        bodies[0].velocity += velocityChange[0];
-        bodies[1].velocity += velocityChange[1];
-
-        bodies[0].transform.rotation = Quaternion.AngleAxis(
-            rotationChange[0].magnitude, rotationChange[0]
-        ) * bodies[0].transform.rotation;
-
-        bodies[1].transform.rotation = Quaternion.AngleAxis(
-            rotationChange[1].magnitude, rotationChange[1]
-        ) * bodies[1].transform.rotation;
+            body.transform.rotation = Quaternion.AngleAxis(
+                rotationChange[i].magnitude, rotationChange[i]
+            ) * body.transform.rotation;
+        }
     }
 
-    public override string ToString() => $"{bodies[0]} <-> {bodies[1]}";
+    public IEnumerable<(int index, RigidBody body)> GetActiveBodies()
+    {
+        Debug.Assert(bodies[0] != null);
+        yield return (0, bodies[0]);
+
+        if (bodies[1])
+            yield return (1, bodies[1]);
+    }
+
+    public override string ToString() => $"{bodies[0]} <-> {bodies[1].name ?? "Plane"}";
 }

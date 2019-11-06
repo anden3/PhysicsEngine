@@ -6,58 +6,74 @@
 
 using UnityEngine;
 
+using System.Collections.Generic;
+
 using AndreExtensions;
+using NaughtyAttributes;
 
 [AddComponentMenu("Rigid Body Physics/Colliders/Sphere")]
 public class BoundingSphere : BoundingVolume
 {
+    [OnValueChanged("FitMesh")]
+    [ValidateInput("ValidateMesh", "Mesh doesn't exist!")]
     public bool fitMesh = true;
-	public float radius {
-        get => _radius * transform.localScale.GetMax();
-        set => _radius = value;
-    }
 
-    [SerializeField]
-    private float _radius;
+    [DisableIf("fitMesh")]
+    [OnValueChanged("RadiusChanged")]
+    public float radius;
 
     public override Type type => Type.Sphere;
     public override Vector3 center => transform.position;
     public override float size => _size;
     private float _size;
 
-    private void OnValidate()
+    private void Awake()
     {
-        if (fitMesh && TryGetComponent(out MeshRenderer mesh))
-        {
-            radius = mesh.bounds.extents.GetMax();
-        }
+        if (fitMesh)
+            radius = GetComponent<MeshRenderer>().bounds.extents.GetMax();
+
+        _size = 4.0f / 3 * Mathf.PI * Mathf.Pow(radius, 3);
     }
 
-    protected void Awake()
+    private void RadiusChanged()
     {
-        // base.Awake();
+        radius *= transform.localScale.GetMax();
         _size = 4.0f / 3 * Mathf.PI * Mathf.Pow(radius, 3);
+    }
+
+    private void FitMesh()
+    {
+        if (fitMesh && TryGetComponent(out MeshRenderer mesh))
+            radius = mesh.bounds.extents.GetMax();
+    }
+
+    private bool ValidateMesh(bool useMesh)
+    {
+        if (useMesh && !TryGetComponent(out MeshRenderer mesh))
+            return false;
+
+        return true;
     }
 
     public override bool IsPointInside(Vector3 point)
         => (point - center).sqrMagnitude <= (radius * radius);
 
-    public override bool Overlaps(BoundingVolume other, out Contact contact)
+    public override bool GetContacts(BoundingVolume other, List<Contact> contacts)
 	{
         switch (other.type)
         {
             case Type.Sphere:
-                return Overlaps(other as BoundingSphere, out contact);
+                return GetContacts(other as BoundingSphere, contacts);
 
             case Type.Cube:
-                return Overlaps(other as BoundingCube, out contact);
+                return GetContacts(other as BoundingCube, contacts);
 
             default:
                 throw new System.NotImplementedException();
         }
 	}
 
-    public override bool Overlaps(BoundingSphere s, out Contact contact)
+    public override bool GetContacts(BoundingSphere s, List<Contact> contacts)
     {
         float minDist = radius + s.radius;
 
@@ -65,10 +81,7 @@ public class BoundingSphere : BoundingVolume
         float distSqr = midLine.sqrMagnitude;
 
         if (distSqr > minDist.Squared())
-        {
-            contact = null;
             return false;
-        }
 
         float dist = Mathf.Sqrt(distSqr);
 
@@ -76,22 +89,19 @@ public class BoundingSphere : BoundingVolume
         Vector3 normal = midLine / dist;
         Vector3 position = center + midLine * 0.5f;
 
-        contact = new Contact(
+        contacts.Add(new Contact(
             body, s.body, position, -normal, depth
-        );
+        ));
 
         return true;
     }
 
-    public override bool Overlaps(BoundingCube c, out Contact contact)
+    public override bool GetContacts(BoundingCube c, List<Contact> contacts)
     {
         Vector3 closestPoint = c.bounds.ClosestPoint(center);
 
         if (!IsPointInside(closestPoint))
-        {
-            contact = null;
             return false;
-        }
 
         Vector3 toCenter = center - closestPoint;
         float distToCenter = toCenter.magnitude;
@@ -100,9 +110,9 @@ public class BoundingSphere : BoundingVolume
         Vector3 normal = toCenter / distToCenter;
         Vector3 position = closestPoint;
 
-        contact = new Contact(
+        contacts.Add(new Contact(
             body, c.body, position, normal, depth
-        );
+        ));
 
         return true;
     }

@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 
+using System.Collections.Generic;
+
 public abstract class BoundingVolume : MonoBehaviour
 {
     public enum Type
@@ -14,9 +16,9 @@ public abstract class BoundingVolume : MonoBehaviour
 
     public RigidBody body;
 
-    public abstract bool Overlaps(BoundingVolume other, out Contact contact);
-	public abstract bool Overlaps(BoundingCube c, out Contact contact);
-    public abstract bool Overlaps(BoundingSphere s, out Contact contact);
+    public abstract bool GetContacts(BoundingVolume other, List<Contact> contacts);
+	public abstract bool GetContacts(BoundingCube c, List<Contact> contacts);
+    public abstract bool GetContacts(BoundingSphere s, List<Contact> contacts);
 
     public abstract bool IsPointInside(Vector3 point);
     public float GetGrowth(BoundingVolume newVolume)

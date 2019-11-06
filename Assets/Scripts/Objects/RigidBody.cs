@@ -1,9 +1,16 @@
 ﻿using UnityEngine;
 
-public class RigidBody : MonoBehaviour
+using System.Collections.Generic;
+
+using NaughtyAttributes;
+
+[AddComponentMenu("Rigid Body Physics/Rigid Body")]
+public class RigidBody : Primitive
 {
 	[Header("Physical Properties")]
 	public float mass;
+
+    [ShowNativeProperty]
 	public float inverseMass { get; protected set; }
 
     public bool affectedByGravity = true;
@@ -18,8 +25,17 @@ public class RigidBody : MonoBehaviour
 	public Vector3 angularVelocity;
     public Vector3 acceleration;
 
-	// Accumulators
-	protected Vector3 forceAccum;
+    [Header("Sleep Settings")]
+    public bool canSleep;
+
+    [ShowIf("canSleep")] public bool isAwake;
+    [ShowIf("canSleep")] public float motionBias;
+    [ShowIf("canSleep")] public float sleepEpsilon;
+
+    [ReadOnly] public float motion;
+
+    // Accumulators
+    protected Vector3 forceAccum;
 	protected Vector3 torqueAccum;
 
 	// Matrices
@@ -35,18 +51,21 @@ public class RigidBody : MonoBehaviour
     public BoundingVolume volume;
 
     [HideInInspector]
-    public bool isStationary = false;
-
-    protected bool isAwake = true;
+    public Vector3 lastFrameAcceleration;
 
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
 	protected virtual void Awake()
 	{
-        if (mass < 0)
+        body = this;
+
+        if (mass <= 0)
             inverseMass = 0;
         else
             inverseMass = 1.0f / mass;
+
+        if (!canSleep)
+            isAwake = true;
 
         volume = GetComponent<BoundingVolume>();
 
@@ -64,17 +83,23 @@ public class RigidBody : MonoBehaviour
         CalculateDerivedData();
     }
 
-    private void OnEnable()
-    {
-        FindObjectOfType<RigidBodyPhysicsEngine>().Register(this);
-    }
-    private void OnDisable()
-    {
-        FindObjectOfType<RigidBodyPhysicsEngine>()?.Unregister(this);
-    }
-
     public void SetInertiaTensor(Matrix3x3 inertiaTensor)
 		=> inverseInertiaTensor = inertiaTensor.GetInverse();
+
+    public void SetAwake(bool awake)
+    {
+        isAwake = awake;
+
+        if (awake)
+        {
+            motion = sleepEpsilon * 2.0f;
+        }
+        else
+        {
+            velocity = Vector3.zero;
+            angularVelocity = Vector3.zero;
+        }
+    }
 
 	public void AddForce(Vector3 force)
 	{
@@ -114,10 +139,15 @@ public class RigidBody : MonoBehaviour
 
 	public bool Integrate(float deltaTime)
 	{
-		Vector3 linearAcc = acceleration + forceAccum * inverseMass;
+        if (!isAwake)
+            return false;
+
+        Vector3 linearAcc = acceleration + forceAccum * inverseMass;
 		Vector3 angularAcc = inverseInertiaTensorWorld.Transform(torqueAccum);
 
-		velocity += linearAcc * deltaTime;
+        lastFrameAcceleration = linearAcc;
+
+        velocity += linearAcc * deltaTime;
 		angularVelocity = angularAcc * deltaTime;
 
 		// Add drag.
@@ -132,13 +162,17 @@ public class RigidBody : MonoBehaviour
 			angularVelocity.magnitude * Time.deltaTime, angularVelocity
 		) * transform.rotation;
 
-		/*
-		// Add drag.
-		velocity *= Mathf.Pow(linearDamping, duration);
-		angularVelocity *= Mathf.Pow(angularDamping, duration);
-		*/
+        CalculateDerivedData();
 
-		CalculateDerivedData();
+        if (canSleep)
+        {
+            float currentMotion = velocity.sqrMagnitude + angularVelocity.sqrMagnitude;
+            motion = Mathf.Clamp(motionBias * motion + (1 - motionBias) * currentMotion, 0, sleepEpsilon * 10);
+
+            if (motion < sleepEpsilon)
+                SetAwake(false);
+        }
+		
 		ClearAccumulators();
 
         isStationary = transform.position == prevPos;
@@ -163,14 +197,27 @@ public class RigidBody : MonoBehaviour
 			inverseInertiaTensor, transformMatrix);
 	}
 
-	/*
+    public override bool GetContacts(Primitive other, List<Contact> contacts)
+    {
+        if (!base.GetContacts(other, contacts))
+            return false;
+
+        // RigidBody-Plane collision. Let the Plane class handle this.
+        if (!other.HasBody())
+            return other.GetContacts(this, contacts);
+
+        // RigidBody-RigidBody collision.
+        return volume.GetContacts(other.body.volume, contacts);
+    }
+
+    /*
 	 * Transform inertia tensor from model space to world space.
-	 */ 
-	private static void _transformInertiaTensor(
+	 */
+    private static void _transformInertiaTensor(
 		ref Matrix3x3 iitWorld, Matrix3x3 iitBody, Matrix4x4 rotmat)
 	{
-		float t4 = rotmat[0]  * iitBody[0] + rotmat[1] * iitBody[3] + rotmat[2]  * iitBody[6];
-		float t9 = rotmat[0]  * iitBody[1] + rotmat[1] * iitBody[4] + rotmat[2]  * iitBody[7];
+		float t4  = rotmat[0] * iitBody[0] + rotmat[1] * iitBody[3] + rotmat[2]  * iitBody[6];
+		float t9  = rotmat[0] * iitBody[1] + rotmat[1] * iitBody[4] + rotmat[2]  * iitBody[7];
 		float t14 = rotmat[0] * iitBody[2] + rotmat[1] * iitBody[5] + rotmat[2]  * iitBody[8];
 		float t28 = rotmat[4] * iitBody[0] + rotmat[5] * iitBody[3] + rotmat[6]  * iitBody[6];
 		float t33 = rotmat[4] * iitBody[1] + rotmat[5] * iitBody[4] + rotmat[6]  * iitBody[7];

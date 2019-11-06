@@ -31,10 +31,10 @@ public class Octree
     public static bool treeReady = false;
 
     private static readonly List<Octree> nodes = new List<Octree>();
-    private static readonly Queue<RigidBody> pendingInsertion = new Queue<RigidBody>();
+    private static readonly Queue<Primitive> pendingInsertion = new Queue<Primitive>();
 
     public Bounds region;
-    public List<RigidBody> objects;
+    public List<Primitive> objects;
 
     private readonly Octree parent;
 
@@ -55,7 +55,7 @@ public class Octree
     /// <param name="region">The suggested dimensions for the bounding region.</param>
     /// <param name="parent">The parent of the node.</param>
     /// <remarks>If items are outside the <paramref name="region"/>, the <paramref name="region"/> will be automatically resized.</remarks>
-    public Octree(Bounds region, Octree parent = null) : this(region, new List<RigidBody>(), parent) { }
+    public Octree(Bounds region, Octree parent = null) : this(region, new List<Primitive>(), parent) { }
 
     /// <summary>
     /// Creates an Octree which encloses the given <paramref name="region"/> and contains the provided <paramref name="objects"/>.
@@ -63,7 +63,7 @@ public class Octree
     /// <param name="region">The bounding region for the oct tree.</param>
     /// <param name="objects">The list of objects contained within the bounding region.</param>
     /// <param name="parent">The parent of the node.</param>
-    private Octree(Bounds region, List<RigidBody> objects, Octree parent = null)
+    private Octree(Bounds region, List<Primitive> objects, Octree parent = null)
     {
         this.region = region;
         this.objects = objects;
@@ -80,11 +80,13 @@ public class Octree
                 throw new System.InvalidOperationException("Root node has parent!?");
 
             root = this;
-            nodes.Add(this);
 
             FindEnclosingCube(ref region);
-            GetOctants(ref octants);
-        }  
+        }
+
+
+        nodes.Add(this);
+        GetOctants(ref octants);
     }
 
     public void Update(float deltaTime)
@@ -108,15 +110,15 @@ public class Octree
 
         // Prune tree.
         objects.RemoveAll(o => o == null || !o.gameObject.activeInHierarchy);
-        List<RigidBody> movedObjects = objects.Where(rb => rb.Integrate(deltaTime)).ToList();
+        List<Primitive> movedObjects = objects.Where(p => p.HasBody() && p.body.Integrate(deltaTime)).ToList();
 
         foreach ((int index, Octree child) in GetActiveChildren())
             child.Update(deltaTime);
 
         // Move moved objects into the right node.
-        foreach (RigidBody movedObj in movedObjects)
+        foreach (Primitive movedObj in movedObjects)
         {
-            if (FindBestFit(movedObj, this, out Octree node) && node != this)
+            if (FindBestFit(movedObj, out Octree node) && node != this)
             {
                 objects.Remove(movedObj);
                 node.objects.Add(movedObj);
@@ -124,7 +126,7 @@ public class Octree
         }
     }
 
-    public static void Enqueue_Static(RigidBody item)
+    public static void Enqueue_Static(Primitive item)
     {
         pendingInsertion.Enqueue(item);
         treeReady = false;
@@ -134,7 +136,7 @@ public class Octree
     /// Add an <paramref name="item"/> to the tree at the next update.
     /// </summary>
     /// <param name="item">The item to add.</param>
-    public void Enqueue(RigidBody item)
+    public void Enqueue(Primitive item)
     {
         if (IsRoot())
         {
@@ -146,7 +148,7 @@ public class Octree
         {
             // Since the item isn't being added to the root,
             // we will take that as a hint that it should be placed near the current node.
-            if (FindBestFit(item, this, out Octree node))
+            if (FindBestFit(item, out Octree node))
                 node.objects.Add(item);
             else
                 throw new System.ArgumentOutOfRangeException("Item doesn't fit in the octree.");
@@ -156,9 +158,9 @@ public class Octree
     /// Add <paramref name="items"/> to the tree at the next update.
     /// </summary>
     /// <param name="items">The items to add.</param>
-    public void Enqueue(IEnumerable<RigidBody> items)
+    public void Enqueue(IEnumerable<Primitive> items)
     {
-        foreach (RigidBody item in items)
+        foreach (Primitive item in items)
             Enqueue(item);
     }
 
@@ -166,50 +168,44 @@ public class Octree
     /// Add <paramref name="items"/> to the tree at the next update.
     /// </summary>
     /// <param name="items">The items to add.</param>
-    public void Enqueue(params RigidBody[] items) => Enqueue(items);
+    public void Enqueue(params Primitive[] items) => Enqueue(items);
 
-    public void GetContacts(List<Contact> contacts) => GetContacts(new List<RigidBody>(), contacts);
+    public void GetContacts(List<Contact> contacts) => GetContacts(new List<Primitive>(), contacts);
 
     /// <summary>
     /// Fill list with contacts of all objects that are colliding with each other in the tree.
     /// </summary>
     /// <param name="parentObjects">List of all objects higher up in the tree.</param>
     /// <param name="contacts">The list to be filled.</param>
-    private void GetContacts(List<RigidBody> parentObjects, List<Contact> contacts)
+    private void GetContacts(List<Primitive> parentObjects, List<Contact> contacts)
     {
         if (!IsEmpty())
         {
-            foreach (RigidBody parentObj in parentObjects)
-                foreach (RigidBody localObj in objects)
-                    if (parentObj.volume.Overlaps(localObj.volume, out Contact contact))
-                        contacts.Add(contact);
+            foreach (Primitive parentObj in parentObjects)
+                foreach (Primitive localObj in objects)
+                    parentObj.GetContacts(localObj, contacts);
         }
 
         if (objects.Count > 1)
         {
-            List<RigidBody> temp = new List<RigidBody>(objects);
+            List<Primitive> temp = new List<Primitive>(objects);
 
             while (temp.Count > 0)
             {
-                foreach (RigidBody localObj in temp)
+                foreach (Primitive localObj in temp)
                 {
-                    RigidBody other = temp[temp.Count - 1];
+                    Primitive other = temp[temp.Count - 1];
 
-                    // Don't check stationary objects or against ourselves.
-                    if (other == localObj || (other.isStationary && localObj.isStationary))
-                        continue;
-
-                    if (other.volume.Overlaps(localObj.volume, out Contact contact))
-                    {
-                        contacts.Add(contact);
-                    }
+                    // Don't check against ourselves.
+                    if (other != localObj)
+                        other.GetContacts(localObj, contacts);
                 }
 
                 temp.RemoveAt(temp.Count - 1);
             }
         }
 
-        parentObjects.AddRange(objects.Where(o => !o.isStationary));
+        parentObjects.AddRange(objects/*.Where(o => !o.isStationary)*/);
 
         foreach ((int index, Octree child) in GetActiveChildren())
             child.GetContacts(parentObjects, contacts);
@@ -228,15 +224,15 @@ public class Octree
             return;
 
         // Create lists of items to be added to the children.
-        List<RigidBody>[] octList = new List<RigidBody>[8];
+        List<Primitive>[] octList = new List<Primitive>[8];
 
         for (int i = 0; i < 8; i++)
-            octList[i] = new List<RigidBody>();
+            octList[i] = new List<Primitive>();
 
         // Objects that get moved into children.
-        List<RigidBody> delist = new List<RigidBody>();
+        List<Primitive> delist = new List<Primitive>();
 
-        foreach (RigidBody body in objects)
+        foreach (Primitive body in objects)
         {
             if (TryFitItemInChildren(body, out int index))
             {
@@ -276,12 +272,11 @@ public class Octree
         {
             while (pendingInsertion.Count > 0)
             {
-                RigidBody item = pendingInsertion.Dequeue();
+                Primitive item = pendingInsertion.Dequeue();
 
-                if (FindBestFit(item, this, out Octree node))
+                if (FindBestFit(item, out Octree node))
                     node.objects.Add(item);
-            }
-                
+            }  
         }
 
         treeReady = true;
@@ -291,48 +286,48 @@ public class Octree
     /// Goes through the tree and stops at the first <paramref name="node"/> which fits the <paramref name="item"/>.
     /// </summary>
     /// <param name="item">The item to fit.</param>
-    /// <param name="start">The node to start from.</param>
     /// <param name="node">The node that fits the item, is null if none are found.</param>
     /// <returns>True if node found, else false.</returns>
-    private static bool FindBestFit(RigidBody item, Octree start, out Octree node)
+    private bool FindBestFit(Primitive item, out Octree node)
     {
-        node = start;
-
-        while (true)
+        // Items without a rigidbody, such as planes, should be added to the root.
+        if (!item.HasBody())
         {
-            if (node.region.Contains(item.volume) != ContainmentType.Contains)
-            {
-                // Keep going upwards until item fits, or we hit the root node.
-                if (node.IsRoot())
-                {
-                    // Root region cannot contain object.
-                    // TODO: Need to rebuild entire tree...
-                    node = null;
-                    return false;
-                }
-
-                node = node.parent;
-                continue;
-            }
-
-            if ((node.IsLeaf() && node.objects.Count < 2) || node.region.size.LessThanOrEqual(MIN_SIZE))
-                return true;
-
-            if (node.TryFitItemInChildren(item, out int index))
-            {
-                if (node.TryGetChild(index, out Octree child))
-                {
-                    node = child;
-                    continue;
-                }
-
-                node = node.AddChild(index);
-                return true;
-            }
-
-            // Can't fit in any children.
+            node = root;
             return true;
         }
+
+        if (region.Contains(item.body.volume) != ContainmentType.Contains)
+        {
+            // Keep going upwards until item fits, or we hit the root node.
+            if (IsRoot())
+            {
+                // Root region cannot contain object.
+                // TODO: Need to rebuild entire tree...
+                node = null;
+                return false;
+            }
+
+            return parent.FindBestFit(item, out node);
+        }
+
+        if ((IsLeaf() && objects.Count < 2) || region.size.LessThanOrEqual(MIN_SIZE))
+        {
+            node = this;
+            return true;
+        }
+
+        if (TryFitItemInChildren(item, out int index))
+        {
+            if (TryGetChild(index, out Octree child))
+                return child.FindBestFit(item, out node);
+
+            return AddChild(index).FindBestFit(item, out node);
+        }
+
+        // Can't fit in any children.
+        node = this;
+        return true;
     }
 
     /// <summary>
@@ -393,28 +388,32 @@ public class Octree
         return false;
     }
 
-    private Octree AddChild(int index) => AddChild(index, new List<RigidBody>());
-    private Octree AddChild(int index, List<RigidBody> items)
+    private Octree AddChild(int index) => AddChild(index, new List<Primitive>());
+    private Octree AddChild(int index, List<Primitive> items)
     {
         activeNodes |= (byte)(1 << index);
 
         Octree child = new Octree(octants[index], items, this);
-        nodes.Add(child);
         children[index] = child;
         return child;
     }
 
     /// <summary>
-    /// Try to fit item into one of the octants given.
+    /// Try to fit <paramref name="item"/> into one of the octants given.
     /// </summary>
     /// <param name="item">The item to fit.</param>
-    /// <param name="octants">An array of bounds representing the octants.</param>
     /// <param name="index">The index of the octant if one is found, else -1.</param>
     /// <returns>True if an octant that fits the item is found.</returns>
-    private bool TryFitItemInChildren(RigidBody item, out int index)
+    private bool TryFitItemInChildren(Primitive item, out int index)
     {
+        if (item.body == null)
+        {
+            index = -1;
+            return false;
+        }
+
         for (index = 0; index < octants.Length; index++)
-            if (octants[index].Contains(item.volume) == ContainmentType.Contains)
+            if (octants[index].Contains(item.body.volume) == ContainmentType.Contains)
                 return true;
 
         index = -1;

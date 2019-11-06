@@ -28,4 +28,10 @@ public class ItemSpawner : MonoBehaviour
             Destroy(i, lifetime);
         }
     }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawCube(spawnArea.center + transform.position, spawnArea.size);
+    }
 }

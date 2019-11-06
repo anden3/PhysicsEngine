@@ -6,6 +6,8 @@
 
 using UnityEngine;
 
+using System.Collections.Generic;
+
 using AndreExtensions;
 
 [ExecuteInEditMode]
@@ -24,38 +26,34 @@ public class BoundingCube : BoundingVolume
     public bool IsBoundsInside(Bounds b) =>
         bounds.min.LessThanOrEqual(b.max) && bounds.max.GreaterThanOrEqual(b.min);
 
-    protected void Awake()
+    private void Update()
     {
-        // base.Awake();
+        if (!transform.hasChanged)
+            return;
+
+        if (fitMesh && TryGetComponent(out MeshRenderer mesh))
+            bounds.extents = mesh.bounds.extents;
+
+        bounds.center = transform.position;
         _size = bounds.size.x * bounds.size.y * bounds.size.z;
     }
 
-    private void Update()
-    {
-        if (transform.hasChanged && fitMesh && TryGetComponent(out MeshRenderer mesh))
-        {
-            bounds.extents = mesh.bounds.extents;
-        }
-
-        bounds.center = transform.position;
-    }
-
-    public override bool Overlaps(BoundingVolume other, out Contact contact)
+    public override bool GetContacts(BoundingVolume other, List<Contact> contacts)
     {
         switch (other.type)
         {
             case Type.Sphere:
-                return Overlaps(other as BoundingSphere, out contact);
+                return GetContacts(other as BoundingSphere, contacts);
 
             case Type.Cube:
-                return Overlaps(other as BoundingCube, out contact);
+                return GetContacts(other as BoundingCube, contacts);
 
             default:
                 throw new System.NotImplementedException();
         }
     }
 
-    public override bool Overlaps(BoundingCube c, out Contact contact)
+    public override bool GetContacts(BoundingCube c, List<Contact> contacts)
     {
         /*
         if (!IsBoundsInside(c.bounds))
@@ -69,10 +67,7 @@ public class BoundingCube : BoundingVolume
         Bounds minkowskiDifference = bounds.GetMinikowskiDifference(c.bounds);
 
         if (!minkowskiDifference.Contains(Vector3.zero))
-        {
-            contact = null;
             return false;
-        }
 
         Vector3 penetrationVector = minkowskiDifference.ClosestPoint(Vector3.zero);
 
@@ -82,51 +77,59 @@ public class BoundingCube : BoundingVolume
         Vector3 position = c.center + penetrationVector;
         // Vector3 normal = GetNormal(position);
 
-        contact = new Contact(
+        contacts.Add(new Contact(
             body, c.body, position, normal, depth
-        );
+        ));
 
         return true;
     }
 
-    public override bool Overlaps(BoundingSphere s, out Contact contact)
+    public override bool GetContacts(BoundingSphere s, List<Contact> contacts)
     {
         Vector3 relCenter = transform.InverseTransformPoint(s.center);
 
         // Return false if distance to sphere's center is larger than the largest extent of the cube.
         if (relCenter.sqrMagnitude > bounds.extents.GetMax().Squared())
-        {
-            contact = null;
             return false;
-        }
 
         // Separating axis theorem.
         if (Mathf.Abs(relCenter.x) - s.radius > bounds.extents.x ||
             Mathf.Abs(relCenter.y) - s.radius > bounds.extents.y ||
             Mathf.Abs(relCenter.z) - s.radius > bounds.extents.z)
         {
-            contact = null;
             return false;
         }
 
         Vector3 closestPoint = bounds.ClosestPoint(s.center);
 
         if (!s.IsPointInside(closestPoint))
-        {
-            contact = null;
             return false;
-        }
 
         Vector3 normal = GetNormal(closestPoint);
         Vector3 position = closestPoint;
 
         float depth = s.radius - (closestPoint - s.center).magnitude;
 
-        contact = new Contact(
+        contacts.Add(new Contact(
             body, s.body, position, normal, depth
-        );
+        ));
 
         return true;
+    }
+
+    public Vector3[] GetVertices()
+    {
+        return new Vector3[8]
+        {
+            new Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+            new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
+            new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
+            new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+            new Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
+            new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
+            new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
+            new Vector3(bounds.max.x, bounds.max.y, bounds.min.z)
+        };
     }
 
     private void OnDrawGizmosSelected()

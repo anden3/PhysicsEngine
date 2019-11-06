@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿/*
+ * Based on code by Ian Millington in Game Physics Engine Development.
+ */
+
+using UnityEngine;
 
 using System.Collections.Generic;
 
@@ -6,6 +10,8 @@ public class ContactResolver : MonoBehaviour
 {
     public int maxPositionIterations = 4;
     public int maxVelocityIterations = 4;
+
+    public float penetrationEpsilon;
 
     public void ResolveContacts(List<Contact> contacts, float deltaTime)
     {
@@ -32,7 +38,7 @@ public class ContactResolver : MonoBehaviour
         while (iterationsUsed < maxPositionIterations)
         {
             // Find biggest penetration.
-            float max = float.Epsilon;
+            float max = penetrationEpsilon;
             Contact match = null;
 
             foreach (Contact contact in contacts)
@@ -47,6 +53,7 @@ public class ContactResolver : MonoBehaviour
             if (match == null)
                 break;
 
+            match.MatchAwakeState();
             match.ApplyPositionChange(
                 max,
                 out Vector3[] linearChange,
@@ -57,6 +64,9 @@ public class ContactResolver : MonoBehaviour
             {
                 for (int bodyIndex = 0; bodyIndex < 2; bodyIndex++)
                 {
+                    if (match.bodies[bodyIndex] == null)
+                        continue;
+
                     for (int b = 0; b < 2; b++)
                     {
                         if (contact.bodies[bodyIndex] == match.bodies[b])
@@ -96,6 +106,7 @@ public class ContactResolver : MonoBehaviour
             if (match == null)
                 break;
 
+            match.MatchAwakeState();
             match.ApplyVelocityChange(
                 out Vector3[] velocityChange,
                 out Vector3[] rotationChange
@@ -105,9 +116,12 @@ public class ContactResolver : MonoBehaviour
             {
                 for (int bodyIndex = 0; bodyIndex < 2; bodyIndex++)
                 {
+                    if (match.bodies[bodyIndex] == null)
+                        continue;
+
                     for (int b = 0; b < 2; b++)
                     {
-                        if (contact.bodies[bodyIndex] == match.bodies[b])
+                        if (match.bodies[bodyIndex] == contact.bodies[b])
                         {
                             Vector3 deltaVelocity =
                                 velocityChange[b] + Vector3.Cross(rotationChange[b], contact.relativePositions[bodyIndex]);

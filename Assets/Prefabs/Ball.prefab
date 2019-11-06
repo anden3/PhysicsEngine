@@ -92,15 +92,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2608c9fb5099a4955b8795d7846d5ba7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  body: {fileID: 0}
+  isStationary: 0
   mass: 1
   affectedByGravity: 1
-  linearDamping: 0.5
-  angularDamping: 0.5
-  velocity: {x: 0, y: 0, z: 0}
+  linearDamping: 0.2
+  angularDamping: 0.2
+  velocity: {x: 0, y: 3, z: 0}
   angularVelocity: {x: 0, y: 0, z: 0}
   acceleration: {x: 0, y: 0, z: 0}
+  canSleep: 1
+  isAwake: 1
+  motionBias: 0.95
+  sleepEpsilon: 0.05
+  motion: 0
   volume: {fileID: 0}
-  isStationary: 0
+  lastFrameAcceleration: {x: 0, y: 0, z: 0}
 --- !u!114 &4036109717580319213
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -115,4 +122,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   body: {fileID: 4036109717580319212}
   fitMesh: 1
-  _radius: 0.5
+  radius: 0.5
