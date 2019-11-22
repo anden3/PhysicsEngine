@@ -120,7 +120,6 @@ public class BoundingSphere : BoundingVolume
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.magenta;
-        // Gizmos.matrix = transform.localToWorldMatrix;
         Gizmos.DrawWireSphere(center, radius);
     }
 }
