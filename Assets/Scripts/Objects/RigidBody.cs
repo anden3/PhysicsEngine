@@ -7,7 +7,13 @@ using NaughtyAttributes;
 [AddComponentMenu("Rigid Body Physics/Rigid Body")]
 public class RigidBody : Primitive
 {
+	public enum IntegrationMethod {
+		Euler,
+		Verlet
+	}
+
 	[Header("Physical Properties")]
+	public IntegrationMethod integration = IntegrationMethod.Euler;
 	public float mass;
 
     [ShowNativeProperty]
@@ -53,11 +59,17 @@ public class RigidBody : Primitive
     [HideInInspector]
     public Vector3 lastFrameAcceleration;
 
+	private Vector3 lastPosition;
+
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
 	protected virtual void Awake()
 	{
         body = this;
+
+		if (integration == IntegrationMethod.Verlet)
+			ChangeVelocity(velocity);
+			// lastPosition = transform.position;
 
         if (mass <= 0)
             inverseMass = 0;
@@ -69,23 +81,31 @@ public class RigidBody : Primitive
 
         volume = GetComponent<BoundingVolume>();
 
+		Matrix3x3 inertiaTensor;
+
         switch (volume.type)
         {
             case BoundingVolume.Type.Cube:
-                SetInertiaTensor(Matrix3x3.InertiaTensors.Cuboid(mass, ((BoundingCube)volume).bounds.extents));
+				inertiaTensor = Matrix3x3.InertiaTensors.Cuboid(mass, ((BoundingCube)volume).bounds.extents);
                 break;
 
             case BoundingVolume.Type.Sphere:
-                SetInertiaTensor(Matrix3x3.InertiaTensors.Sphere(mass, ((BoundingSphere)volume).radius));
+                inertiaTensor = Matrix3x3.InertiaTensors.Sphere(mass, ((BoundingSphere)volume).radius);
                 break;
+
+			default:
+				throw new System.NotSupportedException(
+					$"No inertia tensor found for the given bounding volume: {volume.type}.");
         }
 
+		inverseInertiaTensor = inertiaTensor.GetInverse();
         CalculateDerivedData();
     }
 
-    public void SetInertiaTensor(Matrix3x3 inertiaTensor)
-		=> inverseInertiaTensor = inertiaTensor.GetInverse();
-
+	/// <summary>
+	/// Set the awake state of the rigid body.
+	/// </summary>
+	/// <param name="awake">If the rigid body should be awake or not.</param>
     public void SetAwake(bool awake)
     {
         isAwake = awake;
@@ -98,20 +118,26 @@ public class RigidBody : Primitive
         {
             velocity = Vector3.zero;
             angularVelocity = Vector3.zero;
+			lastPosition = transform.position;
         }
     }
 
+	/// <summary>
+	/// Add linear <paramref name="force"/> to the rigid body.
+	/// </summary>
+	/// <param name="force">Force to apply to the center of mass.</param>
 	public void AddForce(Vector3 force)
 	{
 		forceAccum += force;
 		isAwake = true;
 	}
 
-	/*
-	 * Adds given force to given point on the rigid body.
-	 * Both are given in world space.
-	 */
-	public void AddForceAtPoint(Vector3 force, Vector3 point)
+    /// <summary>
+    /// Adds given <paramref name="force"/> to given <paramref name="point"/> on the rigid body.
+    /// </summary>
+    /// <param name="force">Force in world space.</param>
+    /// <param name="point">Point in world space.</param>
+    public void AddForceAtPoint(Vector3 force, Vector3 point)
 	{
 		Vector3 pt = point - transform.position;
 
@@ -121,21 +147,81 @@ public class RigidBody : Primitive
 		isAwake = true;
 	}
 
-	/*
-	 * Adds given force to given point on the rigid body.
-	 * Force is given in world space, but point is given in model space.
-	 */
-	public void AddForceAtBodyPoint(Vector3 force, Vector3 point)
+    /// <summary>
+    /// Adds given <paramref name="force"/> to given <paramref name="point"/> on the rigid body.
+    /// </summary>
+    /// <param name="force">Force in world space.</param>
+    /// <param name="point">Point in model space.</param>
+    public void AddForceAtBodyPoint(Vector3 force, Vector3 point)
 	{
 		Vector3 pt = transform.TransformPoint(point);
 		AddForceAtPoint(force, pt);
 	}
 
+	/// <summary>
+	/// Get velocity of a <paramref name="point"/>.
+	/// </summary>
+	/// <param name="point">A point in world space.</param>
+	/// <returns>Velocity relative to world.</returns>
     public Vector3 GetVelocityAtPoint(Vector3 point)
-        => velocity + Vector3.Cross(angularVelocity, point - transform.position);
+	{
+		return GetLinearVelocity() + Vector3.Cross(angularVelocity, point - transform.position);
+	}
 
+    /// <summary>
+    /// Get velocity of a <paramref name="point"/>.
+    /// </summary>
+    /// <param name="point">A point in model space.</param>
+    /// <returns>Velocity relative to world.</returns>
     public Vector3 GetVelocityAtBodyPoint(Vector3 point)
-        => velocity + Vector3.Cross(angularVelocity, point);
+	{
+		return GetLinearVelocity() + Vector3.Cross(angularVelocity, point);
+	}
+
+	/// <summary>
+	/// Set the <paramref name="position"/> of the rigid body.
+	/// </summary>
+	/// <param name="position">The new position.</param>
+	public void SetPosition(Vector3 position)
+	{
+		lastPosition += position - transform.position;
+		transform.position = position;
+	}
+
+	public void ChangeVelocity(Vector3 deltaV)
+	{
+		switch (integration)
+		{
+			case IntegrationMethod.Euler:
+				velocity += deltaV;
+				break;
+
+			case IntegrationMethod.Verlet:
+				lastPosition = transform.position - deltaV * Time.fixedDeltaTime;
+				break;
+		}
+	}
+
+	public Vector3 GetLinearVelocity() {
+		switch (integration)
+		{
+			case IntegrationMethod.Euler:
+				return velocity;
+
+			case IntegrationMethod.Verlet:
+				return (transform.position - lastPosition) * (1.0f / Time.fixedDeltaTime);
+		}
+
+		return Vector3.zero;
+	}
+
+	public void Move(Vector3 movement, bool changeLast = false)
+	{
+		transform.position += movement;
+
+		if (changeLast)
+			lastPosition += movement;
+	}
 
 	public bool Integrate(float deltaTime)
 	{
@@ -147,26 +233,41 @@ public class RigidBody : Primitive
 
         lastFrameAcceleration = linearAcc;
 
-        velocity += linearAcc * deltaTime;
-		angularVelocity = angularAcc * deltaTime;
+		switch (integration)
+		{
+			case IntegrationMethod.Euler:
+			{
+				velocity += linearAcc * deltaTime;
+				velocity *= Mathf.Pow(linearDamping, deltaTime);
+				lastPosition = transform.position;
+				transform.position += velocity * deltaTime;
+				break;
+			}
 
-		// Add drag.
-		velocity *= Mathf.Pow(linearDamping, deltaTime);
-		angularVelocity *= Mathf.Pow(angularDamping, deltaTime);
+			case IntegrationMethod.Verlet:
+			{
+				Vector3 newPos = transform.position * (2 - linearDamping)
+					- lastPosition * (1 - linearDamping)
+					+ linearAcc * (deltaTime * deltaTime);
+				
+				lastPosition = transform.position;
+				transform.position = newPos;
+				break;
+			}
+		}
 
-        Vector3 prevPos = transform.position;
+        angularVelocity = angularAcc * deltaTime;
+        angularVelocity *= Mathf.Pow(angularDamping, deltaTime);
 
-		transform.position += velocity * deltaTime;
-
-		transform.rotation = Quaternion.AngleAxis(
-			angularVelocity.magnitude * Time.deltaTime, angularVelocity
-		) * transform.rotation;
+        transform.rotation = Quaternion.AngleAxis(
+            angularVelocity.magnitude * Time.deltaTime, angularVelocity
+        ) * transform.rotation;
 
         CalculateDerivedData();
 
         if (canSleep)
         {
-            float currentMotion = velocity.sqrMagnitude + angularVelocity.sqrMagnitude;
+            float currentMotion = GetLinearVelocity().sqrMagnitude + angularVelocity.sqrMagnitude;
             motion = Mathf.Clamp(motionBias * motion + (1 - motionBias) * currentMotion, 0, sleepEpsilon * 10);
 
             if (motion < sleepEpsilon)
@@ -175,7 +276,7 @@ public class RigidBody : Primitive
 		
 		ClearAccumulators();
 
-        isStationary = transform.position == prevPos;
+        isStationary = transform.position == lastPosition;
         return !isStationary;
 	}
 

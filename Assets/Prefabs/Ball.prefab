@@ -94,6 +94,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   body: {fileID: 0}
   isStationary: 0
+  integration: 0
   mass: 1
   affectedByGravity: 1
   linearDamping: 0.2

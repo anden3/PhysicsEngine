@@ -251,8 +251,7 @@ public class Contact
             }
 
             linearChange[i] = normal * linearMove[i];
-
-            body.transform.position += normal * linearMove[i];
+            body.Move(linearChange[i], true);
 
             body.transform.rotation = Quaternion.AngleAxis(
                 angularChange[i].magnitude, angularChange[i]
@@ -278,7 +277,7 @@ public class Contact
             rotationChange[i] = body.inverseInertiaTensor.Transform(Vector3.Cross(relativePositions[i], impulse));
             velocityChange[i] = impulse * body.inverseMass * (i == 0 ? 1 : -1);
 
-            body.velocity += velocityChange[i];
+            body.ChangeVelocity(velocityChange[i]);
 
             body.transform.rotation = Quaternion.AngleAxis(
                 rotationChange[i].magnitude, rotationChange[i]
