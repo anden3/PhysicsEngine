@@ -83,9 +83,12 @@ public class Contact
 
     public void CalculateDesiredDeltaVelocity(float deltaTime)
     {
-        float velocityFromAcc = Vector3.Dot(bodies[0].lastFrameAcceleration * deltaTime, normal);
+        float velocityFromAcc = 0;
+        
+        if (bodies[0].isAwake)
+            velocityFromAcc += Vector3.Dot(bodies[0].lastFrameAcceleration * deltaTime, normal);
 
-        if (bodies[1])
+        if (bodies[1] && bodies[1].isAwake)
             velocityFromAcc -= Vector3.Dot(bodies[1].lastFrameAcceleration * deltaTime, normal);
 
         float thisRestitution = restitution;

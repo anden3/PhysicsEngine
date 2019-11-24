@@ -3,6 +3,7 @@
  */
 
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 using System.Collections.Generic;
 
@@ -28,7 +29,12 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
     public float angularLimit = 0.2f;
     public float velocityLimit = 0.25f;
 
+    [Header("Key Bindings")]
+    public InputAction toggleSimulationAction;
+    public InputAction toggleOctreeGizmoAction;
+
     private Octree octree;
+    private bool drawingOctree = false;
     private readonly List<RigidBody> bodies = new List<RigidBody>();
 
     private ContactResolver resolver;
@@ -72,17 +78,36 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
         resolver = GetComponent<ContactResolver>();
     }
 
+    private void Start()
+    {
+        toggleSimulationAction.performed += (ctx) =>
+        {
+            if (state == SimState.Running)
+                state = SimState.Stopped;
+            else
+                state = SimState.Running;
+        };
+
+        toggleOctreeGizmoAction.performed += (ctx)
+            => drawingOctree = !drawingOctree;
+    }
+
+    private void OnEnable()
+    {
+        toggleSimulationAction.Enable();
+        toggleOctreeGizmoAction.Enable();
+    }
+
+    private void OnDisable()
+    {
+        toggleSimulationAction.Disable();
+        toggleOctreeGizmoAction.Disable();
+    }
+
     private void FixedUpdate()
 	{
         if (state != SimState.Running)
             return;
-        
-        /*
-		foreach (RigidBody body in bodies)
-		{
-			registry.UpdateForces(Time.fixedDeltaTime);
-		}
-        */
 
         octree.Update(Time.fixedDeltaTime);
         octree.GetContacts(contacts);
@@ -93,11 +118,11 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying)
+        if (drawingOctree)
             Octree.Debug_Draw();
         else
         {
-            Gizmos.color = Color.green;
+            Gizmos.color = (state == SimState.Running) ? Color.red : Color.green;
             Gizmos.DrawWireCube(playArea.center + transform.localPosition, playArea.size);
         }
     }

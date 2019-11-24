@@ -69,7 +69,6 @@ public class RigidBody : Primitive
 
 		if (integration == IntegrationMethod.Verlet)
 			ChangeVelocity(velocity);
-			// lastPosition = transform.position;
 
         if (mass <= 0)
             inverseMass = 0;
