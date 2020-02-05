@@ -5,6 +5,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+using System.Diagnostics;
 using System.Collections.Generic;
 
 [AddComponentMenu("Rigid Body Physics/Rigid Body Physics Engine")]
@@ -18,6 +19,7 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
 
     [Header("Global Settings")]
     public SimState state;
+    public bool useOctree = true;
     public Vector3 gravity = new Vector3(0.0f, -9.82f, 0.0f);
     [Space]
     public Bounds playArea;
@@ -35,10 +37,11 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
 
     private Octree octree;
     private bool drawingOctree = false;
-    private readonly List<RigidBody> bodies = new List<RigidBody>();
 
     private ContactResolver resolver;
     private readonly List<Contact> contacts = new List<Contact>();
+
+    private Stopwatch stopwatch = new Stopwatch();
 
     public void Register(Primitive p)
     {
@@ -46,8 +49,6 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
         {
             if (p.body.affectedByGravity)
                 p.body.acceleration = gravity;
-
-            bodies.Add((RigidBody)p);
         }
 
         if (octree == null)
@@ -56,11 +57,7 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
             octree.Enqueue(p);
         
     }
-    public void Unregister(Primitive p)
-    {
-        if (p.HasBody())
-            bodies.Remove((RigidBody)p);
-    }
+    public void Unregister(Primitive p) {}
 
     private void OnValidate()
     {
@@ -73,6 +70,8 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
         Contact.restitution = restitution;
         Contact.angularLimit = angularLimit;
         Contact.velocityLimit = velocityLimit;
+
+        Octree.minSize = useOctree ? Vector3.one : playArea.size;
 
         octree = new Octree(playArea);
         resolver = GetComponent<ContactResolver>();
@@ -109,12 +108,35 @@ public class RigidBodyPhysicsEngine : MonoBehaviour
         if (state != SimState.Running)
             return;
 
+        stopwatch.Start();
         octree.Update(Time.fixedDeltaTime);
+        stopwatch.Stop();
+
+        System.TimeSpan updateDuration = stopwatch.Elapsed;
+        stopwatch.Reset();
+
+        stopwatch.Start();
         octree.GetContacts(contacts);
+        stopwatch.Stop();
+
+        System.TimeSpan contactDetectionDuration = stopwatch.Elapsed;
+        stopwatch.Reset();
 
         resolver.ResolveContacts(contacts, Time.fixedDeltaTime);
         contacts.Clear();
-	}
+
+        /*
+        Recorder.LogData(
+            $"update_octree_{(useOctree ? "enabled" : "disabled")}",
+            Octree.objectCount, updateDuration.TotalMilliseconds
+        );
+
+        Recorder.LogData(
+            $"detect_octree_{(useOctree ? "enabled" : "disabled")}",
+            Octree.objectCount, contactDetectionDuration.TotalMilliseconds
+        );
+        */
+    }
 
     private void OnDrawGizmos()
     {

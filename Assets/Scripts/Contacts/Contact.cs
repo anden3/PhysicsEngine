@@ -254,7 +254,7 @@ public class Contact
             }
 
             linearChange[i] = normal * linearMove[i];
-            body.Move(linearChange[i], true);
+            body.transform.position += linearChange[i];
 
             body.transform.rotation = Quaternion.AngleAxis(
                 angularChange[i].magnitude, angularChange[i]

@@ -11,8 +11,6 @@ using AndreExtensions;
 
 public class Octree
 {
-    private static readonly Vector3 MIN_SIZE = Vector3.one;
-
     private static readonly Vector3[] OCTANT_CENTERS = new Vector3[8]
     {
         new Vector3(-.5f, -.5f, -.5f),
@@ -26,9 +24,12 @@ public class Octree
     };
 
     public static Octree root = null;
+    public static int objectCount = 0; // temp
 
     public static bool treeBuilt = false;
     public static bool treeReady = false;
+
+    public static Vector3 minSize = Vector3.one;
 
     private static readonly List<Octree> nodes = new List<Octree>();
     private static readonly Queue<Primitive> pendingInsertion = new Queue<Primitive>();
@@ -68,6 +69,8 @@ public class Octree
         this.region = region;
         this.objects = objects;
         this.parent = parent;
+
+        objectCount += objects.Count;
 
         currentLife = -1;
 
@@ -109,7 +112,7 @@ public class Octree
         RemoveInactiveChildren();
 
         // Prune tree.
-        objects.RemoveAll(o => o == null || !o.gameObject.activeInHierarchy);
+        objectCount -= objects.RemoveAll(o => o == null || !o.gameObject.activeInHierarchy);
         List<Primitive> movedObjects = objects.Where(p => p.HasBody() && p.body.Integrate(deltaTime)).ToList();
 
         foreach ((int index, Octree child) in GetActiveChildren())
@@ -149,7 +152,10 @@ public class Octree
             // Since the item isn't being added to the root,
             // we will take that as a hint that it should be placed near the current node.
             if (FindBestFit(item, out Octree node))
+            {
                 node.objects.Add(item);
+                objectCount++;
+            }
             else
                 throw new System.ArgumentOutOfRangeException("Item doesn't fit in the octree.");
         }
@@ -219,7 +225,7 @@ public class Octree
         if (region.size == Vector3.zero)
             throw new System.ArgumentException("Region size is zero", "region.size");
 
-        if (region.size.LessThanOrEqual(MIN_SIZE))
+        if (region.size.LessThanOrEqual(minSize))
             // Can't fit any children.
             return;
 
@@ -252,8 +258,8 @@ public class Octree
             }
         }
 
-        treeBuilt = true;
-        treeReady = true;
+        // treeBuilt = true;
+        // treeReady = true;
     }
 
     /// <summary>
@@ -264,9 +270,15 @@ public class Octree
         if (!treeBuilt)
         {
             while (pendingInsertion.Count > 0)
+            {
                 objects.Add(pendingInsertion.Dequeue());
+                objectCount++;
+            }
 
             BuildTree();
+
+            treeBuilt = true;
+            treeReady = true;
         }
         else
         {
@@ -275,7 +287,10 @@ public class Octree
                 Primitive item = pendingInsertion.Dequeue();
 
                 if (FindBestFit(item, out Octree node))
+                {
                     node.objects.Add(item);
+                    objectCount++;
+                }
             }  
         }
 
@@ -311,7 +326,7 @@ public class Octree
             return parent.FindBestFit(item, out node);
         }
 
-        if ((IsLeaf() && objects.Count < 2) || region.size.LessThanOrEqual(MIN_SIZE))
+        if ((IsLeaf() && objects.Count < 2) || region.size.LessThanOrEqual(minSize))
         {
             node = this;
             return true;

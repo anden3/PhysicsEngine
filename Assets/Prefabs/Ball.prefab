@@ -94,11 +94,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   body: {fileID: 0}
   isStationary: 0
-  integration: 0
   mass: 1
   affectedByGravity: 1
-  linearDamping: 0.309
-  angularDamping: 0.2
+  linearDamping: 0.317
+  angularDamping: 0.3
   velocity: {x: 0, y: 0, z: 0}
   angularVelocity: {x: 0, y: 0, z: 0}
   acceleration: {x: 0, y: 0, z: 0}

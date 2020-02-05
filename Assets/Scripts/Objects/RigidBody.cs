@@ -7,13 +7,7 @@ using NaughtyAttributes;
 [AddComponentMenu("Rigid Body Physics/Rigid Body")]
 public class RigidBody : Primitive
 {
-	public enum IntegrationMethod {
-		Euler,
-		Verlet
-	}
-
 	[Header("Physical Properties")]
-	public IntegrationMethod integration = IntegrationMethod.Euler;
 	public float mass;
 
     [ShowNativeProperty]
@@ -59,16 +53,11 @@ public class RigidBody : Primitive
     [HideInInspector]
     public Vector3 lastFrameAcceleration;
 
-	private Vector3 lastPosition;
-
 	public bool HasFiniteMass() => inverseMass > 0.0f;
 
 	protected virtual void Awake()
 	{
         body = this;
-
-		if (integration == IntegrationMethod.Verlet)
-			ChangeVelocity(velocity);
 
         if (mass <= 0)
             inverseMass = 0;
@@ -117,7 +106,6 @@ public class RigidBody : Primitive
         {
             velocity = Vector3.zero;
             angularVelocity = Vector3.zero;
-			lastPosition = transform.position;
         }
     }
 
@@ -183,44 +171,17 @@ public class RigidBody : Primitive
 	/// <param name="position">The new position.</param>
 	public void SetPosition(Vector3 position)
 	{
-		lastPosition += position - transform.position;
 		transform.position = position;
 	}
 
 	public void ChangeVelocity(Vector3 deltaV)
 	{
-		switch (integration)
-		{
-			case IntegrationMethod.Euler:
-				velocity += deltaV;
-				break;
-
-			case IntegrationMethod.Verlet:
-				lastPosition = transform.position - deltaV * Time.fixedDeltaTime;
-				break;
-		}
-	}
+        velocity += deltaV;
+    }
 
 	public Vector3 GetLinearVelocity() {
-		switch (integration)
-		{
-			case IntegrationMethod.Euler:
-				return velocity;
-
-			case IntegrationMethod.Verlet:
-				return (transform.position - lastPosition) * (1.0f / Time.fixedDeltaTime);
-		}
-
-		return Vector3.zero;
-	}
-
-	public void Move(Vector3 movement, bool changeLast = false)
-	{
-		transform.position += movement;
-
-		if (changeLast)
-			lastPosition += movement;
-	}
+        return velocity;
+    }
 
 	public bool Integrate(float deltaTime)
 	{
@@ -229,31 +190,13 @@ public class RigidBody : Primitive
 
         Vector3 linearAcc = acceleration + forceAccum * inverseMass;
 		Vector3 angularAcc = inverseInertiaTensorWorld.Transform(torqueAccum);
-
         lastFrameAcceleration = linearAcc;
 
-		switch (integration)
-		{
-			case IntegrationMethod.Euler:
-			{
-				velocity += linearAcc * deltaTime;
-				velocity *= Mathf.Pow(linearDamping, deltaTime);
-				lastPosition = transform.position;
-				transform.position += velocity * deltaTime;
-				break;
-			}
+        Vector3 lastPosition = transform.position;
+        transform.position += velocity * deltaTime;
 
-			case IntegrationMethod.Verlet:
-			{
-				Vector3 newPos = transform.position * (2 - linearDamping)
-					- lastPosition * (1 - linearDamping)
-					+ linearAcc * (deltaTime * deltaTime);
-				
-				lastPosition = transform.position;
-				transform.position = newPos;
-				break;
-			}
-		}
+        velocity += linearAcc * deltaTime;
+        velocity *= Mathf.Pow(linearDamping, deltaTime);
 
         angularVelocity = angularAcc * deltaTime;
         angularVelocity *= Mathf.Pow(angularDamping, deltaTime);

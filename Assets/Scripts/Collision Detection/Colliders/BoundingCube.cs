@@ -86,6 +86,7 @@ public class BoundingCube : BoundingVolume
 
     public override bool GetContacts(BoundingSphere s, List<Contact> contacts)
     {
+        /*
         Vector3 relCenter = transform.InverseTransformPoint(s.center);
 
         // Return false if distance to sphere's center is larger than the largest extent of the cube.
@@ -99,6 +100,7 @@ public class BoundingCube : BoundingVolume
         {
             return false;
         }
+        */
 
         Vector3 closestPoint = bounds.ClosestPoint(s.center);
 

@@ -139,35 +139,15 @@ public class Cannon : MonoBehaviour
         Vector3 acceleration = body.affectedByGravity ? engine.gravity : Vector3.zero;
         Vector3 velocity = cannonNozzle.forward * firingSpeed;
 
-        Vector3 lastPosition = currentPosition - velocity * Time.fixedDeltaTime;
-
         while (iterations < maxIterations &&
               (!itemDecay || currentTime <= lifetime) &&
               !CheckPlaneIntersection(currentPosition))
         {
-            switch (body.integration)
-            {
-                case RigidBody.IntegrationMethod.Euler:
-                {
-                    velocity += acceleration * Time.fixedDeltaTime;
-                    velocity *= Mathf.Pow(body.linearDamping, Time.fixedDeltaTime);
+            Vector3 lastPosition = currentPosition;
+            currentPosition += velocity * Time.fixedDeltaTime;
 
-                    lastPosition = currentPosition;
-                    currentPosition += velocity * Time.fixedDeltaTime;
-                    break;
-                }
-
-                case RigidBody.IntegrationMethod.Verlet:
-                {
-                    Vector3 newPos = currentPosition * (2 - body.linearDamping)
-                        - lastPosition * (1 - body.linearDamping)
-                        + acceleration * (Time.fixedDeltaTime * Time.fixedDeltaTime);
-
-                    lastPosition = currentPosition;
-                    currentPosition = newPos;
-                    break;
-                }
-            }
+            velocity += acceleration * Time.fixedDeltaTime;
+            velocity *= Mathf.Pow(body.linearDamping, Time.fixedDeltaTime);
 
             Gizmos.DrawLine(lastPosition, currentPosition);
             currentTime += Time.fixedDeltaTime;
